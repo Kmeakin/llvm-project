@@ -14993,6 +14993,22 @@ static SDValue tryCombineToBSL(SDNode *N,
 // (OR (CSET cc0 cmp0) (CSET cc1 (CMP x1 y1)))
 // =>
 // (CSET cc1 (CCMP x1 y1 cc1 !cc0 cmp0))
+
+// (AND (CSET cc0 cmp0) (CSET cc1 (CMN x1 y1)))
+// =>
+// (CSET cc1 (CCMN x1 y1 !cc1 cc0 cmp0))
+//
+// (OR (CSET cc0 cmp0) (CSET cc1 (CMN x1 y1)))
+// =>
+// (CSET cc1 (CCMN x1 y1 cc1 !cc0 cmp0))
+
+// (AND (CSET cc0 cmp0) (CSET cc1 (FCMP x1 y1)))
+// =>
+// (CSET cc1 (FCCMP x1 y1 !cc1 cc0 cmp0))
+//
+// (OR (CSET cc0 cmp0) (CSET cc1 (FCMP x1 y1)))
+// =>
+// (CSET cc1 (FCCMP x1 y1 cc1 !cc0 cmp0))
 static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDValue CSel0 = N->getOperand(0);
@@ -15017,14 +15033,35 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
   AArch64CC::CondCode CC1 = (AArch64CC::CondCode)CSel1.getConstantOperandVal(2);
   if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
     return SDValue();
-  if (Cmp1.getOpcode() != AArch64ISD::SUBS &&
-      Cmp0.getOpcode() == AArch64ISD::SUBS) {
+
+  unsigned Opcode = 0;
+  bool Swap = false;
+
+  if (Cmp0.getOpcode() != AArch64ISD::SUBS &&
+      Cmp1.getOpcode() == AArch64ISD::SUBS) {
+    Opcode = AArch64ISD::CCMP;
+  } else if (Cmp0.getOpcode() == AArch64ISD::SUBS) {
+    Opcode = AArch64ISD::CCMP;
+    Swap = true;
+  } else if (Cmp0.getOpcode() == AArch64ISD::ADDS) {
+    Opcode = AArch64ISD::CCMN;
+  } else if (Cmp1.getOpcode() == AArch64ISD::ADDS) {
+    Opcode = AArch64ISD::CCMN;
+    Swap = true;
+  } else if (Cmp0.getOpcode() == AArch64ISD::FCMP) {
+    Opcode = AArch64ISD::FCCMP;
+  } else if (Cmp1.getOpcode() == AArch64ISD::FCMP) {
+    Opcode = AArch64ISD::FCCMP;
+    Swap = true;
+  }
+
+  if (Opcode == 0)
+    return SDValue();
+
+  if (Swap) {
     std::swap(Cmp0, Cmp1);
     std::swap(CC0, CC1);
   }
-
-  if (Cmp1.getOpcode() != AArch64ISD::SUBS)
-    return SDValue();
 
   SDLoc DL(N);
   SDValue CCmp;
@@ -15034,7 +15071,7 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
     SDValue Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
     unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
     SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
-    CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
+    CCmp = DAG.getNode(Opcode, DL, MVT_CC, Cmp1.getOperand(0),
                        Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
   } else {
     SDLoc DL(N);
@@ -15042,7 +15079,7 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
     SDValue Condition = DAG.getConstant(CC0, DL, MVT_CC);
     unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvCC1);
     SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
-    CCmp = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC, Cmp1.getOperand(0),
+    CCmp = DAG.getNode(Opcode, DL, MVT_CC, Cmp1.getOperand(0),
                        Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
   }
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, CSel0.getOperand(0),
@@ -19790,6 +19827,26 @@ static SDValue performDupLane128Combine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(ISD::BITCAST, DL, VT, NewDuplane128);
 }
 
+// (CCMP x c nzcv cc cond) => (CCMN x -c nzcv cc cond) if -31 <= c < 0
+static SDValue performCCMPCombine(SDNode *N, SelectionDAG &DAG) {
+  auto X = N->getOperand(0);
+  auto C = N->getOperand(1);
+  auto NZCV = N->getOperand(2);
+  auto CC = N->getOperand(3);
+  auto Cond = N->getOperand(4);
+  SDLoc DL(N);
+  auto VTs = N->getVTList();
+
+  if (ConstantSDNode *ConstC = dyn_cast<ConstantSDNode>(C)) {
+    auto ConstInt = ConstC->getSExtValue();
+    if (-31 <= ConstInt && ConstInt < 0) {
+      auto NegC = DAG.getConstant(-ConstInt, DL, MVT::i32);
+      return DAG.getNode(AArch64ISD::CCMN, DL, VTs, X, NegC, NZCV, CC, Cond);
+    }
+  }
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -19797,6 +19854,8 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   default:
     LLVM_DEBUG(dbgs() << "Custom combining: skipping\n");
     break;
+  case AArch64ISD::CCMP:
+    return performCCMPCombine(N, DAG);
   case ISD::ADD:
   case ISD::SUB:
     return performAddSubCombine(N, DCI, DAG);
