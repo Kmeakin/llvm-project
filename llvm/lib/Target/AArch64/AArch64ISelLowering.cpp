@@ -15034,29 +15034,27 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
   if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
     return SDValue();
 
-  unsigned Opcode = 0;
+  unsigned Opcode;
   bool Swap = false;
 
-  if (Cmp0.getOpcode() != AArch64ISD::SUBS &&
-      Cmp1.getOpcode() == AArch64ISD::SUBS) {
+  if (Cmp1.getOpcode() == AArch64ISD::SUBS) {
     Opcode = AArch64ISD::CCMP;
   } else if (Cmp0.getOpcode() == AArch64ISD::SUBS) {
     Opcode = AArch64ISD::CCMP;
     Swap = true;
-  } else if (Cmp0.getOpcode() == AArch64ISD::ADDS) {
-    Opcode = AArch64ISD::CCMN;
   } else if (Cmp1.getOpcode() == AArch64ISD::ADDS) {
     Opcode = AArch64ISD::CCMN;
+  } else if (Cmp0.getOpcode() == AArch64ISD::ADDS) {
+    Opcode = AArch64ISD::CCMN;
     Swap = true;
-  } else if (Cmp0.getOpcode() == AArch64ISD::FCMP) {
-    Opcode = AArch64ISD::FCCMP;
   } else if (Cmp1.getOpcode() == AArch64ISD::FCMP) {
     Opcode = AArch64ISD::FCCMP;
+  } else if (Cmp0.getOpcode() == AArch64ISD::FCMP) {
+    Opcode = AArch64ISD::FCCMP;
     Swap = true;
-  }
-
-  if (Opcode == 0)
+  } else {
     return SDValue();
+  }
 
   if (Swap) {
     std::swap(Cmp0, Cmp1);

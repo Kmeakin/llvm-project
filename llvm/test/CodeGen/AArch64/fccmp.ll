@@ -31,9 +31,10 @@ define i1 @fcmp_and2(float %0, float %1, float %2, float %3) {
 define i1 @fcmp_and3(float %0, float %1, float %2, float %3, float %4, float %5) {
 ; SDISEL-LABEL: fcmp_and3:
 ; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    fcmp s4, s5
-; SDISEL-NEXT:    fccmp s2, s3, #4, ne
-; SDISEL-NEXT:    cset w0, gt
+; SDISEL-NEXT:    fcmp s0, s1
+; SDISEL-NEXT:    fccmp s2, s3, #4, mi
+; SDISEL-NEXT:    fccmp s4, s5, #4, gt
+; SDISEL-NEXT:    cset w0, ne
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: fcmp_and3:
@@ -59,9 +60,11 @@ define i1 @fcmp_and3(float %0, float %1, float %2, float %3, float %4, float %5)
 define i1 @cmp_and4(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7) {
 ; SDISEL-LABEL: cmp_and4:
 ; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    fcmp s6, s7
-; SDISEL-NEXT:    fccmp s2, s3, #4, eq
-; SDISEL-NEXT:    cset w0, gt
+; SDISEL-NEXT:    fcmp s0, s1
+; SDISEL-NEXT:    fccmp s2, s3, #4, mi
+; SDISEL-NEXT:    fccmp s4, s5, #4, gt
+; SDISEL-NEXT:    fccmp s6, s7, #0, ne
+; SDISEL-NEXT:    cset w0, eq
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: cmp_and4:
@@ -115,9 +118,10 @@ define i1 @cmp_or2(float %0, float %1, float %2, float %3) {
 define i1 @cmp_or3(float %0, float %1, float %2, float %3, float %4, float %5) {
 ; SDISEL-LABEL: cmp_or3:
 ; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    fcmp s4, s5
-; SDISEL-NEXT:    fccmp s2, s3, #0, eq
-; SDISEL-NEXT:    cset w0, gt
+; SDISEL-NEXT:    fcmp s0, s1
+; SDISEL-NEXT:    fccmp s2, s3, #0, pl
+; SDISEL-NEXT:    fccmp s4, s5, #0, le
+; SDISEL-NEXT:    cset w0, ne
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: cmp_or3:
@@ -143,9 +147,11 @@ define i1 @cmp_or3(float %0, float %1, float %2, float %3, float %4, float %5) {
 define i1 @cmp_or4(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7) {
 ; SDISEL-LABEL: cmp_or4:
 ; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    fcmp s6, s7
-; SDISEL-NEXT:    fccmp s2, s3, #0, ne
-; SDISEL-NEXT:    cset w0, gt
+; SDISEL-NEXT:    fcmp s0, s1
+; SDISEL-NEXT:    fccmp s2, s3, #0, pl
+; SDISEL-NEXT:    fccmp s4, s5, #0, le
+; SDISEL-NEXT:    fccmp s6, s7, #4, eq
+; SDISEL-NEXT:    cset w0, eq
 ; SDISEL-NEXT:    ret
 ;
 ; GISEL-LABEL: cmp_or4:
@@ -200,9 +206,10 @@ define i1 @true_or2(float %0, float %1) {
 define i1 @true_or3(float %0, float %1, float %2) {
 ; SDISEL-LABEL: true_or3:
 ; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    movi d0, #0000000000000000
-; SDISEL-NEXT:    fcmp s2, #0.0
-; SDISEL-NEXT:    fccmp s1, s0, #0, eq
+; SDISEL-NEXT:    movi d3, #0000000000000000
+; SDISEL-NEXT:    fcmp s0, #0.0
+; SDISEL-NEXT:    fccmp s1, s3, #0, eq
+; SDISEL-NEXT:    fccmp s2, s3, #0, eq
 ; SDISEL-NEXT:    cset w0, ne
 ; SDISEL-NEXT:    ret
 ;
@@ -253,9 +260,10 @@ define i1 @true_and2(float %0, float %1) {
 define i1 @true_and3(float %0, float %1, float %2) {
 ; SDISEL-LABEL: true_and3:
 ; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    movi d0, #0000000000000000
-; SDISEL-NEXT:    fcmp s2, #0.0
-; SDISEL-NEXT:    fccmp s1, s0, #4, ne
+; SDISEL-NEXT:    movi d3, #0000000000000000
+; SDISEL-NEXT:    fcmp s0, #0.0
+; SDISEL-NEXT:    fccmp s1, s3, #4, ne
+; SDISEL-NEXT:    fccmp s2, s3, #4, ne
 ; SDISEL-NEXT:    cset w0, ne
 ; SDISEL-NEXT:    ret
 ;

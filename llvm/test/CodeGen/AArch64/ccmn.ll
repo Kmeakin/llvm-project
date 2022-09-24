@@ -5,8 +5,8 @@
 define i1 @w0_eq_minus_1_and_w1_eq_minus_2(i32 %0, i32 %1) {
 ; CHECK-LABEL: w0_eq_minus_1_and_w1_eq_minus_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn w1, #2
-; CHECK-NEXT:    ccmn w0, #1, #0, eq
+; CHECK-NEXT:    cmn w0, #1
+; CHECK-NEXT:    ccmn w1, #2, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %3 = icmp eq i32 %0, -1
@@ -19,8 +19,8 @@ define i1 @w0_eq_minus_1_and_w1_eq_minus_2(i32 %0, i32 %1) {
 define i1 @w0_eq_minus_30_and_w1_eq_minus_31(i32 %0, i32 %1) {
 ; CHECK-LABEL: w0_eq_minus_30_and_w1_eq_minus_31:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn w1, #31
-; CHECK-NEXT:    ccmn w0, #30, #0, eq
+; CHECK-NEXT:    cmn w0, #30
+; CHECK-NEXT:    ccmn w1, #31, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %3 = icmp eq i32 %0, -30
@@ -33,8 +33,8 @@ define i1 @w0_eq_minus_30_and_w1_eq_minus_31(i32 %0, i32 %1) {
 define i1 @x0_eq_minus_1_and_x1_eq_minus_2(i64 %0, i64 %1) {
 ; CHECK-LABEL: x0_eq_minus_1_and_x1_eq_minus_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn x1, #2
-; CHECK-NEXT:    ccmn x0, #1, #0, eq
+; CHECK-NEXT:    cmn x0, #1
+; CHECK-NEXT:    ccmn x1, #2, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %3 = icmp eq i64 %0, -1
@@ -47,8 +47,8 @@ define i1 @x0_eq_minus_1_and_x1_eq_minus_2(i64 %0, i64 %1) {
 define i1 @x0_eq_minus_30_and_x1_eq_minus_31(i64 %0, i64 %1) {
 ; CHECK-LABEL: x0_eq_minus_30_and_x1_eq_minus_31:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmn x1, #31
-; CHECK-NEXT:    ccmn x0, #30, #0, eq
+; CHECK-NEXT:    cmn x0, #30
+; CHECK-NEXT:    ccmn x1, #31, #0, eq
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret
   %3 = icmp eq i64 %0, -30
