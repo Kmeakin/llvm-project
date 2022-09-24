@@ -7,11 +7,17 @@ declare   i256       @llvm.uadd.sat.i256(i256, i256)
 declare { i256, i1 } @llvm.usub.with.overflow.i256(i256, i256)
 declare   i256       @llvm.usub.sat.i256(i256, i256)
 
+declare { i256, i1 } @llvm.umul.with.overflow.i256(i256, i256)
+declare   i256       @llvm.umul.sat.i256(i256, i256)
+
 declare { i256, i1 } @llvm.sadd.with.overflow.i256(i256, i256)
 declare   i256       @llvm.sadd.sat.i256(i256, i256)
 
 declare { i256, i1 } @llvm.ssub.with.overflow.i256(i256, i256)
 declare   i256       @llvm.ssub.sat.i256(i256, i256)
+
+declare { i256, i1 } @llvm.smul.with.overflow.i256(i256, i256)
+declare   i256       @llvm.smul.sat.i256(i256, i256)
 
 define i256 @u256_add(i256 %x, i256 %y) {
 ; CHECK-LABEL: u256_add:
@@ -275,4 +281,808 @@ define i256 @i256_saturating_sub(i256 %x, i256 %y) {
 ; CHECK-NEXT:    ret
   %1 = tail call i256 @llvm.ssub.sat.i256(i256 %x, i256 %y)
   ret i256 %1
+}
+
+define i256 @u256_mul(i256 %x, i256 %y) {
+; CHECK-LABEL: u256_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umulh x8, x4, x2
+; CHECK-NEXT:    umulh x9, x6, x0
+; CHECK-NEXT:    madd x8, x4, x3, x8
+; CHECK-NEXT:    madd x9, x6, x1, x9
+; CHECK-NEXT:    mul x10, x4, x2
+; CHECK-NEXT:    mul x11, x6, x0
+; CHECK-NEXT:    madd x8, x5, x2, x8
+; CHECK-NEXT:    madd x9, x7, x0, x9
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    umulh x13, x0, x4
+; CHECK-NEXT:    mul x11, x1, x4
+; CHECK-NEXT:    adc x9, x9, x8
+; CHECK-NEXT:    umulh x12, x1, x4
+; CHECK-NEXT:    mul x8, x0, x5
+; CHECK-NEXT:    adds x11, x11, x13
+; CHECK-NEXT:    umulh x13, x0, x5
+; CHECK-NEXT:    cinc x12, x12, hs
+; CHECK-NEXT:    adds x8, x8, x11
+; CHECK-NEXT:    umulh x14, x1, x5
+; CHECK-NEXT:    cinc x11, x13, hs
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    adds x11, x12, x11
+; CHECK-NEXT:    mul x12, x1, x5
+; CHECK-NEXT:    cset w13, hs
+; CHECK-NEXT:    mov x1, x8
+; CHECK-NEXT:    adds x11, x12, x11
+; CHECK-NEXT:    adc x12, x14, x13
+; CHECK-NEXT:    adds x2, x11, x10
+; CHECK-NEXT:    adc x3, x12, x9
+; CHECK-NEXT:    ret
+  %1 = mul i256 %x, %y
+  ret i256 %1
+}
+
+define { i256, i8 } @u256_checked_mul(i256 %x, i256 %y) {
+; CHECK-LABEL: u256_checked_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul x8, x1, x6
+; CHECK-NEXT:    orr x17, x6, x7
+; CHECK-NEXT:    mul x9, x5, x2
+; CHECK-NEXT:    madd x8, x7, x0, x8
+; CHECK-NEXT:    umulh x10, x6, x0
+; CHECK-NEXT:    madd x9, x3, x4, x9
+; CHECK-NEXT:    umulh x11, x2, x4
+; CHECK-NEXT:    adds x8, x10, x8
+; CHECK-NEXT:    mul x10, x6, x0
+; CHECK-NEXT:    cset w12, hs
+; CHECK-NEXT:    mul x13, x2, x4
+; CHECK-NEXT:    adds x9, x11, x9
+; CHECK-NEXT:    cset w14, hs
+; CHECK-NEXT:    umulh x15, x0, x4
+; CHECK-NEXT:    adds x10, x13, x10
+; CHECK-NEXT:    mul x13, x1, x4
+; CHECK-NEXT:    umulh x11, x1, x4
+; CHECK-NEXT:    adc x16, x9, x8
+; CHECK-NEXT:    mul x8, x0, x5
+; CHECK-NEXT:    adds x9, x13, x15
+; CHECK-NEXT:    umulh x13, x0, x5
+; CHECK-NEXT:    cinc x11, x11, hs
+; CHECK-NEXT:    adds x8, x8, x9
+; CHECK-NEXT:    cinc x9, x13, hs
+; CHECK-NEXT:    mul x13, x1, x5
+; CHECK-NEXT:    adds x9, x11, x9
+; CHECK-NEXT:    umulh x11, x1, x5
+; CHECK-NEXT:    cset w15, hs
+; CHECK-NEXT:    adds x9, x13, x9
+; CHECK-NEXT:    adc x11, x11, x15
+; CHECK-NEXT:    adds x9, x9, x10
+; CHECK-NEXT:    adcs x10, x11, x16
+; CHECK-NEXT:    umulh x13, x7, x0
+; CHECK-NEXT:    cset w11, hs
+; CHECK-NEXT:    cmp x7, #0
+; CHECK-NEXT:    ccmp x1, #0, #4, ne
+; CHECK-NEXT:    umulh x15, x3, x4
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    ccmp xzr, x13, #0, eq
+; CHECK-NEXT:    umulh x13, x1, x6
+; CHECK-NEXT:    mov x1, x8
+; CHECK-NEXT:    ccmp xzr, x13, #0, eq
+; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    cmp x3, #0
+; CHECK-NEXT:    ccmp x5, #0, #4, ne
+; CHECK-NEXT:    orr w12, w13, w12
+; CHECK-NEXT:    ccmp xzr, x15, #0, eq
+; CHECK-NEXT:    umulh x15, x5, x2
+; CHECK-NEXT:    ccmp xzr, x15, #0, eq
+; CHECK-NEXT:    orr x15, x2, x3
+; CHECK-NEXT:    mov x2, x9
+; CHECK-NEXT:    mov x3, x10
+; CHECK-NEXT:    cset w16, ne
+; CHECK-NEXT:    cmp x15, #0
+; CHECK-NEXT:    ccmp x17, #0, #4, ne
+; CHECK-NEXT:    orr w13, w16, w14
+; CHECK-NEXT:    cset w14, ne
+; CHECK-NEXT:    orr w13, w14, w13
+; CHECK-NEXT:    orr w12, w13, w12
+; CHECK-NEXT:    orr w11, w12, w11
+; CHECK-NEXT:    mov w12, #1
+; CHECK-NEXT:    bic w4, w12, w11
+; CHECK-NEXT:    ret
+  %1 = tail call { i256, i1 } @llvm.umul.with.overflow.i256(i256 %x, i256 %y)
+  %2 = extractvalue { i256, i1 } %1, 0
+  %3 = extractvalue { i256, i1 } %1, 1
+  %4 = xor i1 %3, true
+  %5 = zext i1 %4 to i8
+  %6 = insertvalue { i256, i8 } undef, i256 %2, 0
+  %7 = insertvalue { i256, i8 } %6, i8 %5, 1
+  ret { i256, i8 } %7
+}
+
+define { i256, i8 } @u256_overflowing_mul(i256 %x, i256 %y) {
+; CHECK-LABEL: u256_overflowing_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul x8, x1, x6
+; CHECK-NEXT:    orr x17, x6, x7
+; CHECK-NEXT:    mul x9, x5, x2
+; CHECK-NEXT:    madd x8, x7, x0, x8
+; CHECK-NEXT:    umulh x10, x6, x0
+; CHECK-NEXT:    madd x9, x3, x4, x9
+; CHECK-NEXT:    umulh x11, x2, x4
+; CHECK-NEXT:    adds x8, x10, x8
+; CHECK-NEXT:    mul x10, x6, x0
+; CHECK-NEXT:    cset w12, hs
+; CHECK-NEXT:    mul x13, x2, x4
+; CHECK-NEXT:    adds x9, x11, x9
+; CHECK-NEXT:    cset w14, hs
+; CHECK-NEXT:    umulh x15, x0, x4
+; CHECK-NEXT:    adds x10, x13, x10
+; CHECK-NEXT:    mul x13, x1, x4
+; CHECK-NEXT:    umulh x11, x1, x4
+; CHECK-NEXT:    adc x16, x9, x8
+; CHECK-NEXT:    mul x8, x0, x5
+; CHECK-NEXT:    adds x9, x13, x15
+; CHECK-NEXT:    umulh x13, x0, x5
+; CHECK-NEXT:    cinc x11, x11, hs
+; CHECK-NEXT:    adds x8, x8, x9
+; CHECK-NEXT:    cinc x9, x13, hs
+; CHECK-NEXT:    mul x13, x1, x5
+; CHECK-NEXT:    adds x9, x11, x9
+; CHECK-NEXT:    umulh x11, x1, x5
+; CHECK-NEXT:    cset w15, hs
+; CHECK-NEXT:    adds x9, x13, x9
+; CHECK-NEXT:    adc x11, x11, x15
+; CHECK-NEXT:    adds x9, x9, x10
+; CHECK-NEXT:    adcs x10, x11, x16
+; CHECK-NEXT:    umulh x13, x7, x0
+; CHECK-NEXT:    cset w11, hs
+; CHECK-NEXT:    cmp x7, #0
+; CHECK-NEXT:    ccmp x1, #0, #4, ne
+; CHECK-NEXT:    umulh x15, x3, x4
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    ccmp xzr, x13, #0, eq
+; CHECK-NEXT:    umulh x13, x1, x6
+; CHECK-NEXT:    mov x1, x8
+; CHECK-NEXT:    ccmp xzr, x13, #0, eq
+; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    cmp x3, #0
+; CHECK-NEXT:    ccmp x5, #0, #4, ne
+; CHECK-NEXT:    orr w12, w13, w12
+; CHECK-NEXT:    ccmp xzr, x15, #0, eq
+; CHECK-NEXT:    umulh x15, x5, x2
+; CHECK-NEXT:    ccmp xzr, x15, #0, eq
+; CHECK-NEXT:    orr x15, x2, x3
+; CHECK-NEXT:    mov x2, x9
+; CHECK-NEXT:    mov x3, x10
+; CHECK-NEXT:    cset w16, ne
+; CHECK-NEXT:    cmp x15, #0
+; CHECK-NEXT:    ccmp x17, #0, #4, ne
+; CHECK-NEXT:    orr w13, w16, w14
+; CHECK-NEXT:    cset w14, ne
+; CHECK-NEXT:    orr w13, w14, w13
+; CHECK-NEXT:    orr w12, w13, w12
+; CHECK-NEXT:    orr w11, w12, w11
+; CHECK-NEXT:    and w4, w11, #0x1
+; CHECK-NEXT:    ret
+  %1 = tail call { i256, i1 } @llvm.umul.with.overflow.i256(i256 %x, i256 %y)
+  %2 = extractvalue { i256, i1 } %1, 0
+  %3 = extractvalue { i256, i1 } %1, 1
+  %4 = zext i1 %3 to i8
+  %5 = insertvalue { i256, i8 } undef, i256 %2, 0
+  %6 = insertvalue { i256, i8 } %5, i8 %4, 1
+  ret { i256, i8 } %6
+}
+
+define i256 @u256_saturating_mul(i256 %x, i256 %y) {
+; CHECK-LABEL: u256_saturating_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul x8, x1, x6
+; CHECK-NEXT:    mul x9, x5, x2
+; CHECK-NEXT:    madd x8, x7, x0, x8
+; CHECK-NEXT:    umulh x10, x6, x0
+; CHECK-NEXT:    madd x9, x3, x4, x9
+; CHECK-NEXT:    umulh x11, x2, x4
+; CHECK-NEXT:    adds x8, x10, x8
+; CHECK-NEXT:    mul x10, x6, x0
+; CHECK-NEXT:    cset w12, hs
+; CHECK-NEXT:    mul x13, x2, x4
+; CHECK-NEXT:    adds x9, x11, x9
+; CHECK-NEXT:    cset w14, hs
+; CHECK-NEXT:    umulh x15, x0, x4
+; CHECK-NEXT:    adds x10, x13, x10
+; CHECK-NEXT:    mul x13, x1, x4
+; CHECK-NEXT:    umulh x11, x1, x4
+; CHECK-NEXT:    adc x8, x9, x8
+; CHECK-NEXT:    mul x9, x0, x5
+; CHECK-NEXT:    adds x13, x13, x15
+; CHECK-NEXT:    umulh x15, x0, x5
+; CHECK-NEXT:    cinc x11, x11, hs
+; CHECK-NEXT:    adds x9, x9, x13
+; CHECK-NEXT:    cinc x13, x15, hs
+; CHECK-NEXT:    mul x15, x1, x5
+; CHECK-NEXT:    adds x11, x11, x13
+; CHECK-NEXT:    umulh x13, x1, x5
+; CHECK-NEXT:    cset w16, hs
+; CHECK-NEXT:    adds x11, x15, x11
+; CHECK-NEXT:    adc x13, x13, x16
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    adcs x8, x13, x8
+; CHECK-NEXT:    umulh x13, x7, x0
+; CHECK-NEXT:    cset w11, hs
+; CHECK-NEXT:    cmp x7, #0
+; CHECK-NEXT:    ccmp x1, #0, #4, ne
+; CHECK-NEXT:    umulh x15, x3, x4
+; CHECK-NEXT:    orr x16, x2, x3
+; CHECK-NEXT:    ccmp xzr, x13, #0, eq
+; CHECK-NEXT:    umulh x13, x1, x6
+; CHECK-NEXT:    ccmp xzr, x13, #0, eq
+; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    cmp x3, #0
+; CHECK-NEXT:    ccmp x5, #0, #4, ne
+; CHECK-NEXT:    orr w12, w13, w12
+; CHECK-NEXT:    ccmp xzr, x15, #0, eq
+; CHECK-NEXT:    umulh x15, x5, x2
+; CHECK-NEXT:    ccmp xzr, x15, #0, eq
+; CHECK-NEXT:    orr x15, x6, x7
+; CHECK-NEXT:    cset w17, ne
+; CHECK-NEXT:    cmp x16, #0
+; CHECK-NEXT:    ccmp x15, #0, #4, ne
+; CHECK-NEXT:    orr w14, w17, w14
+; CHECK-NEXT:    cset w15, ne
+; CHECK-NEXT:    orr w13, w15, w14
+; CHECK-NEXT:    orr w12, w13, w12
+; CHECK-NEXT:    mul x13, x0, x4
+; CHECK-NEXT:    orr w11, w12, w11
+; CHECK-NEXT:    tst w11, #0x1
+; CHECK-NEXT:    csinv x0, x13, xzr, eq
+; CHECK-NEXT:    csinv x1, x9, xzr, eq
+; CHECK-NEXT:    csinv x3, x8, xzr, eq
+; CHECK-NEXT:    csinv x2, x10, xzr, eq
+; CHECK-NEXT:    ret
+  %1 = tail call { i256, i1 } @llvm.umul.with.overflow.i256(i256 %x, i256 %y)
+  %2 = extractvalue { i256, i1 } %1, 0
+  %3 = extractvalue { i256, i1 } %1, 1
+  %4 = select i1 %3, i256 -1, i256 %2
+  ret i256 %4
+}
+
+define i256 @i256_mul(i256 %x, i256 %y) {
+; CHECK-LABEL: i256_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umulh x8, x4, x2
+; CHECK-NEXT:    umulh x9, x6, x0
+; CHECK-NEXT:    madd x8, x4, x3, x8
+; CHECK-NEXT:    madd x9, x6, x1, x9
+; CHECK-NEXT:    mul x10, x4, x2
+; CHECK-NEXT:    mul x11, x6, x0
+; CHECK-NEXT:    madd x8, x5, x2, x8
+; CHECK-NEXT:    madd x9, x7, x0, x9
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    umulh x13, x0, x4
+; CHECK-NEXT:    mul x11, x1, x4
+; CHECK-NEXT:    adc x9, x9, x8
+; CHECK-NEXT:    umulh x12, x1, x4
+; CHECK-NEXT:    mul x8, x0, x5
+; CHECK-NEXT:    adds x11, x11, x13
+; CHECK-NEXT:    umulh x13, x0, x5
+; CHECK-NEXT:    cinc x12, x12, hs
+; CHECK-NEXT:    adds x8, x8, x11
+; CHECK-NEXT:    umulh x14, x1, x5
+; CHECK-NEXT:    cinc x11, x13, hs
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    adds x11, x12, x11
+; CHECK-NEXT:    mul x12, x1, x5
+; CHECK-NEXT:    cset w13, hs
+; CHECK-NEXT:    mov x1, x8
+; CHECK-NEXT:    adds x11, x12, x11
+; CHECK-NEXT:    adc x12, x14, x13
+; CHECK-NEXT:    adds x2, x11, x10
+; CHECK-NEXT:    adc x3, x12, x9
+; CHECK-NEXT:    ret
+  %1 = mul i256 %x, %y
+  ret i256 %1
+}
+
+define { i256, i8 } @i256_checked_mul(i256 %x, i256 %y) {
+; CHECK-LABEL: i256_checked_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x21, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset w21, -32
+; CHECK-NEXT:    umulh x10, x2, x4
+; CHECK-NEXT:    mov x8, x1
+; CHECK-NEXT:    mul x11, x3, x4
+; CHECK-NEXT:    umulh x9, x3, x4
+; CHECK-NEXT:    mul x12, x2, x5
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    umulh x11, x2, x5
+; CHECK-NEXT:    cinc x9, x9, hs
+; CHECK-NEXT:    adds x10, x12, x10
+; CHECK-NEXT:    umulh x12, x3, x5
+; CHECK-NEXT:    cinc x11, x11, hs
+; CHECK-NEXT:    umulh x14, x0, x4
+; CHECK-NEXT:    adds x9, x9, x11
+; CHECK-NEXT:    mul x11, x3, x5
+; CHECK-NEXT:    cset w13, hs
+; CHECK-NEXT:    umulh x15, x0, x5
+; CHECK-NEXT:    adds x9, x11, x9
+; CHECK-NEXT:    mul x11, x1, x4
+; CHECK-NEXT:    adc x12, x12, x13
+; CHECK-NEXT:    umulh x13, x1, x4
+; CHECK-NEXT:    adds x11, x11, x14
+; CHECK-NEXT:    mul x14, x0, x5
+; CHECK-NEXT:    cinc x13, x13, hs
+; CHECK-NEXT:    mul x17, x8, x7
+; CHECK-NEXT:    adds x1, x14, x11
+; CHECK-NEXT:    umulh x11, x8, x5
+; CHECK-NEXT:    cinc x14, x15, hs
+; CHECK-NEXT:    mul x15, x8, x5
+; CHECK-NEXT:    adds x13, x13, x14
+; CHECK-NEXT:    mul x14, x2, x4
+; CHECK-NEXT:    cset w16, hs
+; CHECK-NEXT:    adds x13, x15, x13
+; CHECK-NEXT:    adc x11, x11, x16
+; CHECK-NEXT:    adds x13, x14, x13
+; CHECK-NEXT:    adcs x11, x10, x11
+; CHECK-NEXT:    umulh x10, x0, x6
+; CHECK-NEXT:    adcs x14, x9, xzr
+; CHECK-NEXT:    mul x9, x8, x6
+; CHECK-NEXT:    cinc x12, x12, hs
+; CHECK-NEXT:    umulh x15, x8, x6
+; CHECK-NEXT:    adds x9, x9, x10
+; CHECK-NEXT:    mul x10, x0, x7
+; CHECK-NEXT:    umulh x16, x0, x7
+; CHECK-NEXT:    cinc x15, x15, hs
+; CHECK-NEXT:    adds x9, x10, x9
+; CHECK-NEXT:    umulh x10, x8, x7
+; CHECK-NEXT:    cinc x16, x16, hs
+; CHECK-NEXT:    mul x19, x3, x7
+; CHECK-NEXT:    adds x15, x15, x16
+; CHECK-NEXT:    mul x16, x0, x6
+; CHECK-NEXT:    cset w18, hs
+; CHECK-NEXT:    adds x15, x17, x15
+; CHECK-NEXT:    adc x17, x10, x18
+; CHECK-NEXT:    adds x10, x16, x13
+; CHECK-NEXT:    adcs x9, x9, x11
+; CHECK-NEXT:    umulh x16, x3, x6
+; CHECK-NEXT:    adcs x11, x15, xzr
+; CHECK-NEXT:    asr x18, x3, #63
+; CHECK-NEXT:    cinc x13, x17, hs
+; CHECK-NEXT:    adds x11, x14, x11
+; CHECK-NEXT:    umulh x14, x2, x6
+; CHECK-NEXT:    adcs x12, x12, x13
+; CHECK-NEXT:    mul x13, x3, x6
+; CHECK-NEXT:    cset w15, hs
+; CHECK-NEXT:    umulh x17, x2, x7
+; CHECK-NEXT:    adds x13, x13, x14
+; CHECK-NEXT:    mul x14, x2, x7
+; CHECK-NEXT:    cinc x16, x16, hs
+; CHECK-NEXT:    mul x21, x2, x6
+; CHECK-NEXT:    adds x13, x14, x13
+; CHECK-NEXT:    umulh x14, x3, x7
+; CHECK-NEXT:    cinc x17, x17, hs
+; CHECK-NEXT:    adds x16, x16, x17
+; CHECK-NEXT:    umulh x17, x18, x6
+; CHECK-NEXT:    cset w20, hs
+; CHECK-NEXT:    adds x16, x19, x16
+; CHECK-NEXT:    adc x14, x14, x20
+; CHECK-NEXT:    adds x11, x21, x11
+; CHECK-NEXT:    mul x19, x5, x18
+; CHECK-NEXT:    adcs x12, x13, x12
+; CHECK-NEXT:    umulh x13, x4, x18
+; CHECK-NEXT:    adcs x15, x16, x15
+; CHECK-NEXT:    madd x17, x18, x7, x17
+; CHECK-NEXT:    cinc x14, x14, hs
+; CHECK-NEXT:    mul x6, x18, x6
+; CHECK-NEXT:    add x20, x13, x19
+; CHECK-NEXT:    mul x16, x4, x18
+; CHECK-NEXT:    asr x7, x7, #63
+; CHECK-NEXT:    add x17, x17, x6
+; CHECK-NEXT:    umulh x18, x5, x18
+; CHECK-NEXT:    add x20, x20, x16
+; CHECK-NEXT:    adds x6, x16, x6
+; CHECK-NEXT:    adc x17, x20, x17
+; CHECK-NEXT:    adds x5, x19, x13
+; CHECK-NEXT:    cinc x20, x18, hs
+; CHECK-NEXT:    adds x5, x16, x5
+; CHECK-NEXT:    cinc x13, x13, hs
+; CHECK-NEXT:    adds x13, x20, x13
+; CHECK-NEXT:    cset w20, hs
+; CHECK-NEXT:    adds x13, x19, x13
+; CHECK-NEXT:    adc x18, x18, x20
+; CHECK-NEXT:    mul x20, x2, x7
+; CHECK-NEXT:    adds x13, x13, x6
+; CHECK-NEXT:    umulh x2, x2, x7
+; CHECK-NEXT:    mul x19, x0, x7
+; CHECK-NEXT:    adc x17, x18, x17
+; CHECK-NEXT:    umulh x18, x0, x7
+; CHECK-NEXT:    add x2, x2, x20
+; CHECK-NEXT:    mul x6, x8, x7
+; CHECK-NEXT:    adds x20, x20, x19
+; CHECK-NEXT:    add x21, x18, x19
+; CHECK-NEXT:    madd x2, x3, x7, x2
+; CHECK-NEXT:    add x3, x21, x6
+; CHECK-NEXT:    umulh x8, x7, x8
+; CHECK-NEXT:    adc x2, x2, x3
+; CHECK-NEXT:    adds x3, x19, x18
+; CHECK-NEXT:    cinc x18, x18, hs
+; CHECK-NEXT:    adds x3, x6, x3
+; CHECK-NEXT:    cinc x7, x8, hs
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    adds x18, x18, x7
+; CHECK-NEXT:    cset w7, hs
+; CHECK-NEXT:    adds x18, x6, x18
+; CHECK-NEXT:    adc x8, x8, x7
+; CHECK-NEXT:    adds x18, x18, x20
+; CHECK-NEXT:    adc x8, x8, x2
+; CHECK-NEXT:    adds x16, x19, x16
+; CHECK-NEXT:    adcs x2, x3, x5
+; CHECK-NEXT:    mov x3, x9
+; CHECK-NEXT:    adcs x13, x18, x13
+; CHECK-NEXT:    adc x8, x8, x17
+; CHECK-NEXT:    adds x11, x11, x16
+; CHECK-NEXT:    adcs x12, x12, x2
+; CHECK-NEXT:    mov x2, x10
+; CHECK-NEXT:    adcs x13, x15, x13
+; CHECK-NEXT:    adc x8, x14, x8
+; CHECK-NEXT:    asr x14, x9, #63
+; CHECK-NEXT:    eor x8, x8, x14
+; CHECK-NEXT:    eor x12, x12, x14
+; CHECK-NEXT:    orr x8, x12, x8
+; CHECK-NEXT:    eor x12, x13, x14
+; CHECK-NEXT:    eor x11, x11, x14
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    orr x11, x11, x12
+; CHECK-NEXT:    orr x8, x11, x8
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w4, eq
+; CHECK-NEXT:    ldr x21, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %1 = tail call { i256, i1 } @llvm.smul.with.overflow.i256(i256 %x, i256 %y)
+  %2 = extractvalue { i256, i1 } %1, 0
+  %3 = extractvalue { i256, i1 } %1, 1
+  %4 = xor i1 %3, true
+  %5 = zext i1 %4 to i8
+  %6 = insertvalue { i256, i8 } undef, i256 %2, 0
+  %7 = insertvalue { i256, i8 } %6, i8 %5, 1
+  ret { i256, i8 } %7
+}
+
+define { i256, i8 } @i256_overflowing_mul(i256 %x, i256 %y) {
+; CHECK-LABEL: i256_overflowing_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x21, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset w21, -32
+; CHECK-NEXT:    umulh x10, x2, x4
+; CHECK-NEXT:    mov x8, x1
+; CHECK-NEXT:    mul x11, x3, x4
+; CHECK-NEXT:    umulh x9, x3, x4
+; CHECK-NEXT:    mul x12, x2, x5
+; CHECK-NEXT:    adds x10, x11, x10
+; CHECK-NEXT:    umulh x11, x2, x5
+; CHECK-NEXT:    cinc x9, x9, hs
+; CHECK-NEXT:    adds x10, x12, x10
+; CHECK-NEXT:    umulh x12, x3, x5
+; CHECK-NEXT:    cinc x11, x11, hs
+; CHECK-NEXT:    umulh x14, x0, x4
+; CHECK-NEXT:    adds x9, x9, x11
+; CHECK-NEXT:    mul x11, x3, x5
+; CHECK-NEXT:    cset w13, hs
+; CHECK-NEXT:    umulh x15, x0, x5
+; CHECK-NEXT:    adds x9, x11, x9
+; CHECK-NEXT:    mul x11, x1, x4
+; CHECK-NEXT:    adc x12, x12, x13
+; CHECK-NEXT:    umulh x13, x1, x4
+; CHECK-NEXT:    adds x11, x11, x14
+; CHECK-NEXT:    mul x14, x0, x5
+; CHECK-NEXT:    cinc x13, x13, hs
+; CHECK-NEXT:    mul x17, x8, x7
+; CHECK-NEXT:    adds x1, x14, x11
+; CHECK-NEXT:    umulh x11, x8, x5
+; CHECK-NEXT:    cinc x14, x15, hs
+; CHECK-NEXT:    mul x15, x8, x5
+; CHECK-NEXT:    adds x13, x13, x14
+; CHECK-NEXT:    mul x14, x2, x4
+; CHECK-NEXT:    cset w16, hs
+; CHECK-NEXT:    adds x13, x15, x13
+; CHECK-NEXT:    adc x11, x11, x16
+; CHECK-NEXT:    adds x13, x14, x13
+; CHECK-NEXT:    adcs x11, x10, x11
+; CHECK-NEXT:    umulh x10, x0, x6
+; CHECK-NEXT:    adcs x14, x9, xzr
+; CHECK-NEXT:    mul x9, x8, x6
+; CHECK-NEXT:    cinc x12, x12, hs
+; CHECK-NEXT:    umulh x15, x8, x6
+; CHECK-NEXT:    adds x9, x9, x10
+; CHECK-NEXT:    mul x10, x0, x7
+; CHECK-NEXT:    umulh x16, x0, x7
+; CHECK-NEXT:    cinc x15, x15, hs
+; CHECK-NEXT:    adds x9, x10, x9
+; CHECK-NEXT:    umulh x10, x8, x7
+; CHECK-NEXT:    cinc x16, x16, hs
+; CHECK-NEXT:    mul x19, x3, x7
+; CHECK-NEXT:    adds x15, x15, x16
+; CHECK-NEXT:    mul x16, x0, x6
+; CHECK-NEXT:    cset w18, hs
+; CHECK-NEXT:    adds x15, x17, x15
+; CHECK-NEXT:    adc x17, x10, x18
+; CHECK-NEXT:    adds x10, x16, x13
+; CHECK-NEXT:    adcs x9, x9, x11
+; CHECK-NEXT:    umulh x16, x3, x6
+; CHECK-NEXT:    adcs x11, x15, xzr
+; CHECK-NEXT:    asr x18, x3, #63
+; CHECK-NEXT:    cinc x13, x17, hs
+; CHECK-NEXT:    adds x11, x14, x11
+; CHECK-NEXT:    umulh x14, x2, x6
+; CHECK-NEXT:    adcs x12, x12, x13
+; CHECK-NEXT:    mul x13, x3, x6
+; CHECK-NEXT:    cset w15, hs
+; CHECK-NEXT:    umulh x17, x2, x7
+; CHECK-NEXT:    adds x13, x13, x14
+; CHECK-NEXT:    mul x14, x2, x7
+; CHECK-NEXT:    cinc x16, x16, hs
+; CHECK-NEXT:    mul x21, x2, x6
+; CHECK-NEXT:    adds x13, x14, x13
+; CHECK-NEXT:    umulh x14, x3, x7
+; CHECK-NEXT:    cinc x17, x17, hs
+; CHECK-NEXT:    adds x16, x16, x17
+; CHECK-NEXT:    umulh x17, x18, x6
+; CHECK-NEXT:    cset w20, hs
+; CHECK-NEXT:    adds x16, x19, x16
+; CHECK-NEXT:    adc x14, x14, x20
+; CHECK-NEXT:    adds x11, x21, x11
+; CHECK-NEXT:    mul x19, x5, x18
+; CHECK-NEXT:    adcs x12, x13, x12
+; CHECK-NEXT:    umulh x13, x4, x18
+; CHECK-NEXT:    adcs x15, x16, x15
+; CHECK-NEXT:    madd x17, x18, x7, x17
+; CHECK-NEXT:    cinc x14, x14, hs
+; CHECK-NEXT:    mul x6, x18, x6
+; CHECK-NEXT:    add x20, x13, x19
+; CHECK-NEXT:    mul x16, x4, x18
+; CHECK-NEXT:    asr x7, x7, #63
+; CHECK-NEXT:    add x17, x17, x6
+; CHECK-NEXT:    umulh x18, x5, x18
+; CHECK-NEXT:    add x20, x20, x16
+; CHECK-NEXT:    adds x6, x16, x6
+; CHECK-NEXT:    adc x17, x20, x17
+; CHECK-NEXT:    adds x5, x19, x13
+; CHECK-NEXT:    cinc x20, x18, hs
+; CHECK-NEXT:    adds x5, x16, x5
+; CHECK-NEXT:    cinc x13, x13, hs
+; CHECK-NEXT:    adds x13, x20, x13
+; CHECK-NEXT:    cset w20, hs
+; CHECK-NEXT:    adds x13, x19, x13
+; CHECK-NEXT:    adc x18, x18, x20
+; CHECK-NEXT:    mul x20, x2, x7
+; CHECK-NEXT:    adds x13, x13, x6
+; CHECK-NEXT:    umulh x2, x2, x7
+; CHECK-NEXT:    mul x19, x0, x7
+; CHECK-NEXT:    adc x17, x18, x17
+; CHECK-NEXT:    umulh x18, x0, x7
+; CHECK-NEXT:    add x2, x2, x20
+; CHECK-NEXT:    mul x6, x8, x7
+; CHECK-NEXT:    adds x20, x20, x19
+; CHECK-NEXT:    add x21, x18, x19
+; CHECK-NEXT:    madd x2, x3, x7, x2
+; CHECK-NEXT:    add x3, x21, x6
+; CHECK-NEXT:    umulh x8, x7, x8
+; CHECK-NEXT:    adc x2, x2, x3
+; CHECK-NEXT:    adds x3, x19, x18
+; CHECK-NEXT:    cinc x18, x18, hs
+; CHECK-NEXT:    adds x3, x6, x3
+; CHECK-NEXT:    cinc x7, x8, hs
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    adds x18, x18, x7
+; CHECK-NEXT:    cset w7, hs
+; CHECK-NEXT:    adds x18, x6, x18
+; CHECK-NEXT:    adc x8, x8, x7
+; CHECK-NEXT:    adds x18, x18, x20
+; CHECK-NEXT:    adc x8, x8, x2
+; CHECK-NEXT:    adds x16, x19, x16
+; CHECK-NEXT:    adcs x2, x3, x5
+; CHECK-NEXT:    mov x3, x9
+; CHECK-NEXT:    adcs x13, x18, x13
+; CHECK-NEXT:    adc x8, x8, x17
+; CHECK-NEXT:    adds x11, x11, x16
+; CHECK-NEXT:    adcs x12, x12, x2
+; CHECK-NEXT:    mov x2, x10
+; CHECK-NEXT:    adcs x13, x15, x13
+; CHECK-NEXT:    adc x8, x14, x8
+; CHECK-NEXT:    asr x14, x9, #63
+; CHECK-NEXT:    eor x8, x8, x14
+; CHECK-NEXT:    eor x12, x12, x14
+; CHECK-NEXT:    orr x8, x12, x8
+; CHECK-NEXT:    eor x12, x13, x14
+; CHECK-NEXT:    eor x11, x11, x14
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    orr x11, x11, x12
+; CHECK-NEXT:    orr x8, x11, x8
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w4, ne
+; CHECK-NEXT:    ldr x21, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+  %1 = tail call { i256, i1 } @llvm.smul.with.overflow.i256(i256 %x, i256 %y)
+  %2 = extractvalue { i256, i1 } %1, 0
+  %3 = extractvalue { i256, i1 } %1, 1
+  %4 = zext i1 %3 to i8
+  %5 = insertvalue { i256, i8 } undef, i256 %2, 0
+  %6 = insertvalue { i256, i8 } %5, i8 %4, 1
+  ret { i256, i8 } %6
+}
+
+define i256 @i256_saturating_mul(i256 %x, i256 %y) {
+; CHECK-LABEL: i256_saturating_mul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x22, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset w21, -24
+; CHECK-NEXT:    .cfi_offset w22, -32
+; CHECK-NEXT:    umulh x9, x2, x4
+; CHECK-NEXT:    mul x10, x3, x4
+; CHECK-NEXT:    umulh x8, x3, x4
+; CHECK-NEXT:    mul x11, x2, x5
+; CHECK-NEXT:    adds x9, x10, x9
+; CHECK-NEXT:    umulh x10, x2, x5
+; CHECK-NEXT:    cinc x8, x8, hs
+; CHECK-NEXT:    adds x9, x11, x9
+; CHECK-NEXT:    umulh x11, x3, x5
+; CHECK-NEXT:    cinc x10, x10, hs
+; CHECK-NEXT:    umulh x13, x0, x4
+; CHECK-NEXT:    adds x8, x8, x10
+; CHECK-NEXT:    mul x10, x3, x5
+; CHECK-NEXT:    cset w12, hs
+; CHECK-NEXT:    umulh x14, x0, x5
+; CHECK-NEXT:    adds x10, x10, x8
+; CHECK-NEXT:    mul x8, x1, x4
+; CHECK-NEXT:    adc x11, x11, x12
+; CHECK-NEXT:    umulh x12, x1, x4
+; CHECK-NEXT:    adds x8, x8, x13
+; CHECK-NEXT:    mul x13, x0, x5
+; CHECK-NEXT:    cinc x12, x12, hs
+; CHECK-NEXT:    mul x15, x1, x5
+; CHECK-NEXT:    adds x8, x13, x8
+; CHECK-NEXT:    umulh x13, x1, x5
+; CHECK-NEXT:    cinc x14, x14, hs
+; CHECK-NEXT:    mul x17, x1, x7
+; CHECK-NEXT:    adds x12, x12, x14
+; CHECK-NEXT:    mul x14, x2, x4
+; CHECK-NEXT:    cset w16, hs
+; CHECK-NEXT:    adds x12, x15, x12
+; CHECK-NEXT:    adc x13, x13, x16
+; CHECK-NEXT:    adds x12, x14, x12
+; CHECK-NEXT:    adcs x9, x9, x13
+; CHECK-NEXT:    umulh x13, x0, x6
+; CHECK-NEXT:    adcs x14, x10, xzr
+; CHECK-NEXT:    mul x10, x1, x6
+; CHECK-NEXT:    cinc x11, x11, hs
+; CHECK-NEXT:    umulh x15, x1, x6
+; CHECK-NEXT:    adds x10, x10, x13
+; CHECK-NEXT:    mul x13, x0, x7
+; CHECK-NEXT:    umulh x16, x0, x7
+; CHECK-NEXT:    cinc x15, x15, hs
+; CHECK-NEXT:    adds x13, x13, x10
+; CHECK-NEXT:    umulh x10, x1, x7
+; CHECK-NEXT:    cinc x16, x16, hs
+; CHECK-NEXT:    mul x19, x3, x7
+; CHECK-NEXT:    adds x15, x15, x16
+; CHECK-NEXT:    mul x16, x0, x6
+; CHECK-NEXT:    cset w18, hs
+; CHECK-NEXT:    adds x15, x17, x15
+; CHECK-NEXT:    adc x17, x10, x18
+; CHECK-NEXT:    adds x10, x16, x12
+; CHECK-NEXT:    adcs x9, x13, x9
+; CHECK-NEXT:    umulh x16, x3, x6
+; CHECK-NEXT:    adcs x12, x15, xzr
+; CHECK-NEXT:    asr x18, x3, #63
+; CHECK-NEXT:    cinc x13, x17, hs
+; CHECK-NEXT:    adds x12, x14, x12
+; CHECK-NEXT:    umulh x14, x2, x6
+; CHECK-NEXT:    adcs x11, x11, x13
+; CHECK-NEXT:    mul x13, x3, x6
+; CHECK-NEXT:    cset w15, hs
+; CHECK-NEXT:    umulh x17, x2, x7
+; CHECK-NEXT:    adds x13, x13, x14
+; CHECK-NEXT:    mul x14, x2, x7
+; CHECK-NEXT:    cinc x16, x16, hs
+; CHECK-NEXT:    mul x21, x2, x6
+; CHECK-NEXT:    adds x13, x14, x13
+; CHECK-NEXT:    umulh x14, x3, x7
+; CHECK-NEXT:    cinc x17, x17, hs
+; CHECK-NEXT:    adds x16, x16, x17
+; CHECK-NEXT:    umulh x17, x18, x6
+; CHECK-NEXT:    cset w20, hs
+; CHECK-NEXT:    adds x16, x19, x16
+; CHECK-NEXT:    adc x14, x14, x20
+; CHECK-NEXT:    adds x12, x21, x12
+; CHECK-NEXT:    mul x19, x5, x18
+; CHECK-NEXT:    adcs x11, x13, x11
+; CHECK-NEXT:    umulh x13, x4, x18
+; CHECK-NEXT:    adcs x15, x16, x15
+; CHECK-NEXT:    madd x17, x18, x7, x17
+; CHECK-NEXT:    cinc x14, x14, hs
+; CHECK-NEXT:    mul x6, x18, x6
+; CHECK-NEXT:    add x20, x13, x19
+; CHECK-NEXT:    mul x16, x4, x18
+; CHECK-NEXT:    add x17, x17, x6
+; CHECK-NEXT:    umulh x18, x5, x18
+; CHECK-NEXT:    add x20, x20, x16
+; CHECK-NEXT:    adds x6, x16, x6
+; CHECK-NEXT:    adc x17, x20, x17
+; CHECK-NEXT:    adds x5, x19, x13
+; CHECK-NEXT:    cinc x20, x18, hs
+; CHECK-NEXT:    adds x5, x16, x5
+; CHECK-NEXT:    cinc x13, x13, hs
+; CHECK-NEXT:    adds x13, x20, x13
+; CHECK-NEXT:    asr x20, x7, #63
+; CHECK-NEXT:    cset w21, hs
+; CHECK-NEXT:    adds x13, x19, x13
+; CHECK-NEXT:    adc x18, x18, x21
+; CHECK-NEXT:    mul x21, x2, x20
+; CHECK-NEXT:    adds x13, x13, x6
+; CHECK-NEXT:    umulh x2, x2, x20
+; CHECK-NEXT:    mul x19, x0, x20
+; CHECK-NEXT:    adc x17, x18, x17
+; CHECK-NEXT:    umulh x18, x0, x20
+; CHECK-NEXT:    add x2, x2, x21
+; CHECK-NEXT:    mul x6, x1, x20
+; CHECK-NEXT:    adds x21, x21, x19
+; CHECK-NEXT:    add x22, x18, x19
+; CHECK-NEXT:    madd x2, x3, x20, x2
+; CHECK-NEXT:    add x22, x22, x6
+; CHECK-NEXT:    umulh x1, x20, x1
+; CHECK-NEXT:    adc x2, x2, x22
+; CHECK-NEXT:    adds x22, x19, x18
+; CHECK-NEXT:    cinc x18, x18, hs
+; CHECK-NEXT:    adds x20, x6, x22
+; CHECK-NEXT:    cinc x22, x1, hs
+; CHECK-NEXT:    adds x18, x18, x22
+; CHECK-NEXT:    cset w22, hs
+; CHECK-NEXT:    adds x18, x6, x18
+; CHECK-NEXT:    adc x1, x1, x22
+; CHECK-NEXT:    adds x18, x18, x21
+; CHECK-NEXT:    adc x1, x1, x2
+; CHECK-NEXT:    adds x16, x19, x16
+; CHECK-NEXT:    adcs x2, x20, x5
+; CHECK-NEXT:    adcs x13, x18, x13
+; CHECK-NEXT:    adc x17, x1, x17
+; CHECK-NEXT:    adds x12, x12, x16
+; CHECK-NEXT:    adcs x11, x11, x2
+; CHECK-NEXT:    adcs x13, x15, x13
+; CHECK-NEXT:    asr x15, x9, #63
+; CHECK-NEXT:    adc x14, x14, x17
+; CHECK-NEXT:    eor x11, x11, x15
+; CHECK-NEXT:    eor x14, x14, x15
+; CHECK-NEXT:    eor x13, x13, x15
+; CHECK-NEXT:    eor x12, x12, x15
+; CHECK-NEXT:    orr x11, x11, x14
+; CHECK-NEXT:    orr x12, x12, x13
+; CHECK-NEXT:    mul x13, x0, x4
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    orr x11, x12, x11
+; CHECK-NEXT:    eor x12, x7, x3
+; CHECK-NEXT:    asr x12, x12, #63
+; CHECK-NEXT:    cmp x11, #0
+; CHECK-NEXT:    eor x14, x12, #0x7fffffffffffffff
+; CHECK-NEXT:    csinv x0, x13, x12, eq
+; CHECK-NEXT:    csinv x1, x8, x12, eq
+; CHECK-NEXT:    csinv x2, x10, x12, eq
+; CHECK-NEXT:    csel x3, x14, x9, ne
+; CHECK-NEXT:    ldp x22, x21, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  %1 = tail call { i256, i1 } @llvm.smul.with.overflow.i256(i256 %x, i256 %y)
+  %2 = extractvalue { i256, i1 } %1, 0
+  %3 = extractvalue { i256, i1 } %1, 1
+  %4 = xor i256 %y, %x
+  %5 = icmp sgt i256 %4, -1
+  %6 = select i1 %5, i256 57896044618658097711785492504343953926634992332820282019728792003956564819967, i256 -57896044618658097711785492504343953926634992332820282019728792003956564819968
+  %7 = select i1 %3, i256 %6, i256 %2
+  ret i256 %7
 }
