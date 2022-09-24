@@ -15056,7 +15056,6 @@ static SDValue tryCombineToBSL(SDNode *N,
 // =>
 // (CSET cc1 (FCCMP x1 y1 cc1 !cc0 cmp0))
 static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
-  EVT VT = N->getValueType(0);
   SDValue CSel0 = N->getOperand(0);
   SDValue CSel1 = N->getOperand(1);
 
@@ -19853,17 +19852,49 @@ static SDValue performCCMPCombine(SDNode *N, SelectionDAG &DAG) {
   auto NZCV = N->getOperand(2);
   auto CC = N->getOperand(3);
   auto Cond = N->getOperand(4);
-  SDLoc DL(N);
-  auto VTs = N->getVTList();
 
   if (ConstantSDNode *ConstC = dyn_cast<ConstantSDNode>(C)) {
     auto ConstInt = ConstC->getSExtValue();
     if (-31 <= ConstInt && ConstInt < 0) {
+      SDLoc DL(N);
+      auto VTs = N->getVTList();
       auto NegC = DAG.getConstant(-ConstInt, DL, MVT::i32);
       return DAG.getNode(AArch64ISD::CCMN, DL, VTs, X, NegC, NZCV, CC, Cond);
     }
   }
   return SDValue();
+}
+
+// (FCCMP x 0.0 nzcv EQ (FCMP y 0.0)) => (FCCMP x y nzcv EQ (FCMP y 0.0))
+static SDValue performFCCMPCombine(SDNode *N, SelectionDAG &DAG) {
+  auto X = N->getOperand(0);
+  auto C1 = N->getOperand(1);
+  auto NZCV = N->getOperand(2);
+  auto CC = static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(3));
+  auto CCVal = (N->getOperand(3));
+
+  ConstantFPSDNode *ConstFloat1 = dyn_cast<ConstantFPSDNode>(C1);
+  if (!ConstFloat1 || !ConstFloat1->isZero())
+    return SDValue();
+
+  if (CC != AArch64CC::EQ)
+    return SDValue();
+
+  auto FCMP = N->getOperand(4);
+  if (FCMP.getOpcode() != AArch64ISD::FCMP)
+    return SDValue();
+
+  auto Y = FCMP.getOperand(0);
+  auto C2 = FCMP.getOperand(1);
+
+  ConstantFPSDNode *ConstFloat2 = dyn_cast<ConstantFPSDNode>(C1);
+  if (!ConstFloat2 || !ConstFloat2->isZero())
+    return SDValue();
+
+  SDLoc DL(N);
+  auto VTs = N->getVTList();
+
+  return DAG.getNode(AArch64ISD::FCCMP, DL, VTs, X, Y, NZCV, CCVal, FCMP);
 }
 
 SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
@@ -19873,8 +19904,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   default:
     LLVM_DEBUG(dbgs() << "Custom combining: skipping\n");
     break;
-  case AArch64ISD::CCMP:
-    return performCCMPCombine(N, DAG);
   case ISD::ADD:
   case ISD::SUB:
     return performAddSubCombine(N, DCI, DAG);
@@ -19956,6 +19985,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performTBZCombine(N, DCI, DAG);
   case AArch64ISD::CSEL:
     return performCSELCombine(N, DCI, DAG);
+  case AArch64ISD::CCMP:
+    return performCCMPCombine(N, DAG);
+  case AArch64ISD::FCCMP:
+    return performFCCMPCombine(N, DAG);
   case AArch64ISD::DUP:
     return performDUPCombine(N, DCI);
   case AArch64ISD::DUPLANE128:
