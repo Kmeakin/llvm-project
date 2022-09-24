@@ -2994,8 +2994,8 @@ class BaseLogicalRegPseudo<RegisterClass regtype, SDPatternOperator OpNode>
 
 // Split from LogicalImm as not all instructions have both.
 multiclass LogicalReg<bits<2> opc, bit N, string mnemonic,
-                      SDPatternOperator OpNode> {
-  let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+                      SDPatternOperator OpNode, int AddedComplexityVal = 0> {
+  let isReMaterializable = 1, isAsCheapAsAMove = 1, AddedComplexity = AddedComplexityVal in {
   def Wrr : BaseLogicalRegPseudo<GPR32, OpNode>;
   def Xrr : BaseLogicalRegPseudo<GPR64, OpNode>;
   }
@@ -7207,7 +7207,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in
 multiclass SIMDTwoScalarMixedBHS<bit U, bits<5> opc, string asm,
                                  SDPatternOperator OpNode = null_frag> {
   def v1i32  : BaseSIMDTwoScalar<U, 0b10, 0b00, opc, FPR32, FPR64, asm,
-        [(set (i32 FPR32:$Rd), (OpNode (i64 FPR64:$Rn)))]>;
+        [(set (f32 FPR32:$Rd), (OpNode (f64 FPR64:$Rn)))]>;
   def v1i16  : BaseSIMDTwoScalar<U, 0b01, 0b00, opc, FPR16, FPR32, asm, []>;
   def v1i8   : BaseSIMDTwoScalar<U, 0b00, 0b00, opc, FPR8 , FPR16, asm, []>;
 }

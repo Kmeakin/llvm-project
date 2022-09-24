@@ -47,6 +47,8 @@ public:
     AppleA12,
     AppleA13,
     AppleA14,
+    AppleA15,
+    AppleA16,
     Carmel,
     CortexA35,
     CortexA53,
@@ -109,6 +111,9 @@ protected:
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
+
+  // ReserveXRegisterForRA[i] - X#i is not available for register allocator.
+  BitVector ReserveXRegisterForRA;
 
   // CustomCallUsedXRegister[i] - X#i call saved.
   BitVector CustomCallSavedXRegs;
@@ -196,7 +201,13 @@ public:
   }
 
   bool isXRegisterReserved(size_t i) const { return ReserveXRegister[i]; }
-  unsigned getNumXRegisterReserved() const { return ReserveXRegister.count(); }
+  bool isXRegisterReservedForRA(size_t i) const { return ReserveXRegisterForRA[i]; }
+  unsigned getNumXRegisterReserved() const {
+    BitVector AllReservedX(AArch64::GPR64commonRegClass.getNumRegs());
+    AllReservedX |= ReserveXRegister;
+    AllReservedX |= ReserveXRegisterForRA;
+    return AllReservedX.count();
+  }
   bool isXRegCustomCalleeSaved(size_t i) const {
     return CustomCallSavedXRegs[i];
   }

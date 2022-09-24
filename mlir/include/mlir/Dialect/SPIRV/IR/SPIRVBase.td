@@ -73,9 +73,9 @@ def SPIRV_Dialect : Dialect {
         Attribute attr, DialectAsmPrinter &printer) const override;
   }];
 
-  // TODO: This has overlapping accessors with generated when switched to
-  // prefixed. Fix and update to _Both & then _Prefixed.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
+  // TODO(https://github.com/llvm/llvm-project/issues/57887): Switch to
+  // _Prefixed accessors.
+  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 //===----------------------------------------------------------------------===//
@@ -189,7 +189,7 @@ class Extension<list<I32EnumAttrCase> extensions> : Availability {
     "}; " #
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     "ArrayRef<::mlir::spirv::Extension> " #
-      "ref(exts, ::llvm::array_lengthof(exts));");
+      "ref(exts, std::size(exts));");
   let instance = "ref";
 }
 
@@ -231,7 +231,7 @@ class Capability<list<I32EnumAttrCase> capabilities> : Availability {
     "}; " #
     // The following manual ArrayRef constructor call is to satisfy GCC 5.
     "ArrayRef<::mlir::spirv::Capability> " #
-      "ref(caps, ::llvm::array_lengthof(caps));");
+      "ref(caps, std::size(caps));");
   let instance = "ref";
 }
 
@@ -4221,6 +4221,9 @@ def SPV_OC_OpConvertUToF                : I32EnumAttrCase<"OpConvertUToF", 112>;
 def SPV_OC_OpUConvert                   : I32EnumAttrCase<"OpUConvert", 113>;
 def SPV_OC_OpSConvert                   : I32EnumAttrCase<"OpSConvert", 114>;
 def SPV_OC_OpFConvert                   : I32EnumAttrCase<"OpFConvert", 115>;
+def SPV_OC_OpPtrCastToGeneric           : I32EnumAttrCase<"OpPtrCastToGeneric", 121>;
+def SPV_OC_OpGenericCastToPtr           : I32EnumAttrCase<"OpGenericCastToPtr", 122>;
+def SPV_OC_OpGenericCastToPtrExplicit   : I32EnumAttrCase<"OpGenericCastToPtrExplicit", 123>;
 def SPV_OC_OpBitcast                    : I32EnumAttrCase<"OpBitcast", 124>;
 def SPV_OC_OpSNegate                    : I32EnumAttrCase<"OpSNegate", 126>;
 def SPV_OC_OpFNegate                    : I32EnumAttrCase<"OpFNegate", 127>;
@@ -4372,7 +4375,8 @@ def SPV_OpcodeAttr :
       SPV_OC_OpCompositeInsert, SPV_OC_OpTranspose, SPV_OC_OpImageDrefGather,
       SPV_OC_OpImage, SPV_OC_OpImageQuerySize, SPV_OC_OpConvertFToU,
       SPV_OC_OpConvertFToS, SPV_OC_OpConvertSToF, SPV_OC_OpConvertUToF,
-      SPV_OC_OpUConvert, SPV_OC_OpSConvert, SPV_OC_OpFConvert, SPV_OC_OpBitcast,
+      SPV_OC_OpUConvert, SPV_OC_OpSConvert, SPV_OC_OpFConvert, SPV_OC_OpPtrCastToGeneric, 
+      SPV_OC_OpGenericCastToPtr, SPV_OC_OpGenericCastToPtrExplicit, SPV_OC_OpBitcast,
       SPV_OC_OpSNegate, SPV_OC_OpFNegate, SPV_OC_OpIAdd, SPV_OC_OpFAdd,
       SPV_OC_OpISub, SPV_OC_OpFSub, SPV_OC_OpIMul, SPV_OC_OpFMul, SPV_OC_OpUDiv,
       SPV_OC_OpSDiv, SPV_OC_OpFDiv, SPV_OC_OpUMod, SPV_OC_OpSRem, SPV_OC_OpSMod,
@@ -4539,6 +4543,30 @@ class SPV_ExtInstOp<string mnemonic, string setPrefix, string setName,
 
   // Name used to import the extended instruction set.
   string extendedInstSetName = setName;
+}
+
+// Base classes for SPIR-V vendor ops. These have opcode in the form of
+// Op<Name><VENDOR>, e.g., OpCooperativeMatrixStoreNV.
+class SPV_VendorOp<string mnemonic, string vendorName,
+                   list<Trait> traits = []> :
+  SPV_Op<vendorName # "." # mnemonic, traits> {
+  string spirvOpName = "Op" # mnemonic # vendorName;
+}
+
+class SPV_ExtVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "EXT", traits> {
+}
+
+class SPV_KhrVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "KHR", traits> {
+}
+
+class SPV_IntelVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "INTEL", traits> {
+}
+
+class SPV_NvVendorOp<string mnemonic, list<Trait> traits = []> :
+  SPV_VendorOp<mnemonic, "NV", traits> {
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

@@ -799,7 +799,7 @@ set(LLVM_TARGET_TRIPLE_ENV CACHE STRING "The name of environment variable to ove
 mark_as_advanced(LLVM_TARGET_TRIPLE_ENV)
 
 # Per target dir not yet supported on Arm 32 bit due to arm vs armhf handling
-if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
+if(CMAKE_SYSTEM_NAME MATCHES "BSD|Linux" AND NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^arm")
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default ON)
 else()
   set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_default OFF)
@@ -878,6 +878,7 @@ set(LLVM_ENUM_ASM_PRINTERS "")
 set(LLVM_ENUM_ASM_PARSERS "")
 set(LLVM_ENUM_DISASSEMBLERS "")
 set(LLVM_ENUM_TARGETMCAS "")
+set(LLVM_ENUM_EXEGESIS "")
 foreach(t ${LLVM_TARGETS_TO_BUILD})
   set( td ${LLVM_MAIN_SRC_DIR}/lib/Target/${t} )
 
@@ -907,9 +908,13 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
     set(LLVM_ENUM_DISASSEMBLERS
       "${LLVM_ENUM_DISASSEMBLERS}LLVM_DISASSEMBLER(${t})\n")
   endif()
-    if( EXISTS ${td}/MCA/CMakeLists.txt )
+  if( EXISTS ${td}/MCA/CMakeLists.txt )
     set(LLVM_ENUM_TARGETMCAS
       "${LLVM_ENUM_TARGETMCAS}LLVM_TARGETMCA(${t})\n")
+  endif()
+  if( EXISTS ${LLVM_MAIN_SRC_DIR}/tools/llvm-exegesis/lib/${t}/CMakeLists.txt )
+    set(LLVM_ENUM_EXEGESIS
+      "${LLVM_ENUM_EXEGESIS}LLVM_EXEGESIS(${t})\n")
   endif()
 endforeach(t)
 
@@ -938,11 +943,15 @@ configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/TargetMCAs.def.in
   ${LLVM_INCLUDE_DIR}/llvm/Config/TargetMCAs.def
   )
+configure_file(
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/TargetExegesis.def.in
+  ${LLVM_INCLUDE_DIR}/llvm/Config/TargetExegesis.def
+  )
 
 # They are not referenced. See set_output_directory().
-set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/bin )
-set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
-set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX} )
+set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LLVM_TOOLS_BINARY_DIR} )
+set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
+set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
 
 if(LLVM_INCLUDE_TESTS)
   include(GetErrcMessages)
@@ -1001,7 +1010,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   file(COPY ${TENSORFLOW_AOT_PATH}/include DESTINATION ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow
     NO_SOURCE_PERMISSIONS
     PATTERN "google/*" EXCLUDE
-    PATTERN "*.pb.h" EXCLUDE) 
+    PATTERN "*.pb.h" EXCLUDE)
   include_directories(${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/tensorflow/include)
   add_subdirectory(${TENSORFLOW_AOT_PATH}/xla_aot_runtime_src
     ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY}/tf_runtime)

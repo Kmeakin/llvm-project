@@ -15,7 +15,7 @@
 
 // -----
 
-def SPV_CooperativeMatrixLengthNVOp : SPV_Op<"CooperativeMatrixLengthNV",
+def SPV_NVCooperativeMatrixLengthOp : SPV_NvVendorOp<"CooperativeMatrixLength",
   [NoSideEffect]> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
@@ -28,18 +28,18 @@ def SPV_CooperativeMatrixLengthNVOp : SPV_Op<"CooperativeMatrixLengthNV",
     Type is a cooperative matrix type.
 
     ``` {.ebnf}
-    cooperative-matrix-length-op ::= ssa-id `=` `spv.CooperativeMatrixLengthNV
+    cooperative-matrix-length-op ::= ssa-id `=` `spv.NV.CooperativeMatrixLength
                                     ` : ` cooperative-matrix-type
     ```
 
     For example:
 
     ```
-    %0 = spv.CooperativeMatrixLengthNV : !spv.coopmatrix<Subgroup, i32, 8, 16>
+    %0 = spv.NV.CooperativeMatrixLength : !spv.coopmatrix<Subgroup, i32, 8, 16>
     ```
   }];
 
-  let assemblyFormat = "attr-dict `:` $type";
+  let assemblyFormat = "attr-dict `:` $cooperative_matrix_type";
 
   let availability = [
     MinVersion<SPV_V_1_0>,
@@ -49,7 +49,7 @@ def SPV_CooperativeMatrixLengthNVOp : SPV_Op<"CooperativeMatrixLengthNV",
   ];
 
   let arguments = (ins
-    TypeAttr:$type
+    TypeAttr:$cooperative_matrix_type
   );
 
   let results = (outs
@@ -60,7 +60,7 @@ def SPV_CooperativeMatrixLengthNVOp : SPV_Op<"CooperativeMatrixLengthNV",
 
 // -----
 
-def SPV_CooperativeMatrixLoadNVOp : SPV_Op<"CooperativeMatrixLoadNV", []> {
+def SPV_NVCooperativeMatrixLoadOp : SPV_NvVendorOp<"CooperativeMatrixLoad", []> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
   let description = [{
@@ -100,7 +100,7 @@ def SPV_CooperativeMatrixLoadNVOp : SPV_Op<"CooperativeMatrixLoadNV", []> {
     ### Custom assembly form
 
     ``` {.ebnf}
-    cooperative-matrixload-op ::= ssa-id `=` `spv.CooperativeMatrixLoadNV`
+    cooperative-matrixload-op ::= ssa-id `=` `spv.NV.CooperativeMatrixLoad`
                               ssa-use `,` ssa-use `,` ssa-use
                               (`[` memory-access `]`)? ` : `
                               pointer-type `as`
@@ -110,7 +110,7 @@ def SPV_CooperativeMatrixLoadNVOp : SPV_Op<"CooperativeMatrixLoadNV", []> {
     For example:
 
     ```
-    %0 = spv.CooperativeMatrixLoadNV %ptr, %stride, %colMajor
+    %0 = spv.NV.CooperativeMatrixLoad %ptr, %stride, %colMajor
          : !spv.ptr<i32, StorageBuffer> as !spv.coopmatrix<i32, Workgroup, 16, 8>
     ```
   }];
@@ -136,7 +136,7 @@ def SPV_CooperativeMatrixLoadNVOp : SPV_Op<"CooperativeMatrixLoadNV", []> {
 
 // -----
 
-def SPV_CooperativeMatrixMulAddNVOp : SPV_Op<"CooperativeMatrixMulAddNV",
+def SPV_NVCooperativeMatrixMulAddOp : SPV_NvVendorOp<"CooperativeMatrixMulAdd",
   [NoSideEffect, AllTypesMatch<["c", "result"]>]> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
@@ -172,7 +172,7 @@ def SPV_CooperativeMatrixMulAddNVOp : SPV_Op<"CooperativeMatrixMulAddNV",
     the scope of the operation).
 
     ``` {.ebnf}
-    cooperative-matrixmuladd-op ::= ssa-id `=` `spv.CooperativeMatrixMulAddNV`
+    cooperative-matrixmuladd-op ::= ssa-id `=` `spv.NV.CooperativeMatrixMulAdd`
                               ssa-use `,` ssa-use `,` ssa-use ` : `
                               a-cooperative-matrix-type,
                               b-cooperative-matrix-type ->
@@ -181,7 +181,7 @@ def SPV_CooperativeMatrixMulAddNVOp : SPV_Op<"CooperativeMatrixMulAddNV",
     For example:
 
     ```
-    %0 = spv.CooperativeMatrixMulAddNV %arg0, %arg1, %arg2,  :
+    %0 = spv.NV.CooperativeMatrixMulAdd %arg0, %arg1, %arg2,  :
       !spv.coopmatrix<Subgroup, i32, 8, 16>
     ```
   }];
@@ -210,7 +210,7 @@ def SPV_CooperativeMatrixMulAddNVOp : SPV_Op<"CooperativeMatrixMulAddNV",
 
 // -----
 
-def SPV_CooperativeMatrixStoreNVOp : SPV_Op<"CooperativeMatrixStoreNV", []> {
+def SPV_NVCooperativeMatrixStoreOp : SPV_NvVendorOp<"CooperativeMatrixStore", []> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
   let description = [{
@@ -236,7 +236,7 @@ def SPV_CooperativeMatrixStoreNVOp : SPV_Op<"CooperativeMatrixStoreNV", []> {
     same as specifying None.
 
     ``` {.ebnf}
-    coop-matrix-store-op ::= `spv.CooperativeMatrixStoreNV `
+    coop-matrix-store-op ::= `spv.NV.CooperativeMatrixStore `
                               ssa-use `, ` ssa-use `, `
                               ssa-use `, ` ssa-use `, `
                               (`[` memory-access `]`)? `:`
@@ -246,7 +246,7 @@ def SPV_CooperativeMatrixStoreNVOp : SPV_Op<"CooperativeMatrixStoreNV", []> {
     For example:
 
     ```
-      spv.CooperativeMatrixStoreNV %arg0, %arg2, %arg1, %arg3 :
+      spv.NV.CooperativeMatrixStore %arg0, %arg2, %arg1, %arg3 :
         !spv.ptr<i32, StorageBuffer>, !spv.coopmatrix<Workgroup, i32, 16, 8>
     ```
   }];
