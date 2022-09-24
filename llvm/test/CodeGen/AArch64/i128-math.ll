@@ -34,8 +34,7 @@ define { i128, i8 } @u128_checked_add(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
 ; CHECK-NEXT:    adcs x1, x1, x3
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    eor w2, w8, #0x1
+; CHECK-NEXT:    cset w2, lo
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.uadd.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -90,8 +89,7 @@ define { i128, i8 } @u128_checked_sub(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
 ; CHECK-NEXT:    sbcs x1, x1, x3
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    eor w2, w8, #0x1
+; CHECK-NEXT:    cset w2, hs
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.usub.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -146,8 +144,7 @@ define { i128, i8 } @i128_checked_add(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adds x0, x0, x2
 ; CHECK-NEXT:    adcs x1, x1, x3
-; CHECK-NEXT:    cset w8, vs
-; CHECK-NEXT:    eor w2, w8, #0x1
+; CHECK-NEXT:    cset w2, vc
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.sadd.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -204,8 +201,7 @@ define { i128, i8 } @i128_checked_sub(i128 %x, i128 %y) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    subs x0, x0, x2
 ; CHECK-NEXT:    sbcs x1, x1, x3
-; CHECK-NEXT:    cset w8, vs
-; CHECK-NEXT:    eor w2, w8, #0x1
+; CHECK-NEXT:    cset w2, vc
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.ssub.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -267,17 +263,16 @@ define { i128, i8 } @u128_checked_mul(i128 %x, i128 %y) {
 ; CHECK-NEXT:    madd x8, x1, x2, x8
 ; CHECK-NEXT:    umulh x10, x1, x2
 ; CHECK-NEXT:    adds x8, x9, x8
-; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    cset w9, lo
 ; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    ccmp x3, #0, #4, ne
+; CHECK-NEXT:    ccmp x3, #0, #0, eq
 ; CHECK-NEXT:    mov x1, x8
-; CHECK-NEXT:    ccmp xzr, x10, #0, eq
+; CHECK-NEXT:    ccmp xzr, x10, #4, ne
 ; CHECK-NEXT:    umulh x10, x3, x0
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    ccmp xzr, x10, #0, eq
-; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:    orr w9, w10, w9
-; CHECK-NEXT:    eor w2, w9, #0x1
+; CHECK-NEXT:    ccmp xzr, x10, #4, ne
+; CHECK-NEXT:    cset w10, eq
+; CHECK-NEXT:    orr w2, w10, w9
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0

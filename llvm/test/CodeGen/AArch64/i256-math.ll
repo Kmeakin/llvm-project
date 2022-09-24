@@ -32,8 +32,7 @@ define { i256, i8 } @u256_checked_add(i256 %x, i256 %y) {
 ; CHECK-NEXT:    adcs x1, x1, x5
 ; CHECK-NEXT:    adcs x2, x2, x6
 ; CHECK-NEXT:    adcs x3, x3, x7
-; CHECK-NEXT:    cset w8, hs
-; CHECK-NEXT:    eor w4, w8, #0x1
+; CHECK-NEXT:    cset w4, lo
 ; CHECK-NEXT:    ret
   %1 = tail call { i256, i1 } @llvm.uadd.with.overflow.i256(i256 %x, i256 %y)
   %2 = extractvalue { i256, i1 } %1, 0
@@ -98,8 +97,7 @@ define { i256, i8 } @u256_checked_sub(i256 %x, i256 %y) {
 ; CHECK-NEXT:    sbcs x1, x1, x5
 ; CHECK-NEXT:    sbcs x2, x2, x6
 ; CHECK-NEXT:    sbcs x3, x3, x7
-; CHECK-NEXT:    cset w8, lo
-; CHECK-NEXT:    eor w4, w8, #0x1
+; CHECK-NEXT:    cset w4, hs
 ; CHECK-NEXT:    ret
   %1 = tail call { i256, i1 } @llvm.usub.with.overflow.i256(i256 %x, i256 %y)
   %2 = extractvalue { i256, i1 } %1, 0
@@ -164,8 +162,7 @@ define { i256, i8 } @i256_checked_add(i256 %x, i256 %y) {
 ; CHECK-NEXT:    adcs x1, x1, x5
 ; CHECK-NEXT:    adcs x2, x2, x6
 ; CHECK-NEXT:    adcs x3, x3, x7
-; CHECK-NEXT:    cset w8, vs
-; CHECK-NEXT:    eor w4, w8, #0x1
+; CHECK-NEXT:    cset w4, vc
 ; CHECK-NEXT:    ret
   %1 = tail call { i256, i1 } @llvm.sadd.with.overflow.i256(i256 %x, i256 %y)
   %2 = extractvalue { i256, i1 } %1, 0
@@ -232,8 +229,7 @@ define { i256, i8 } @i256_checked_sub(i256 %x, i256 %y) {
 ; CHECK-NEXT:    sbcs x1, x1, x5
 ; CHECK-NEXT:    sbcs x2, x2, x6
 ; CHECK-NEXT:    sbcs x3, x3, x7
-; CHECK-NEXT:    cset w8, vs
-; CHECK-NEXT:    eor w4, w8, #0x1
+; CHECK-NEXT:    cset w4, vc
 ; CHECK-NEXT:    ret
   %1 = tail call { i256, i1 } @llvm.ssub.with.overflow.i256(i256 %x, i256 %y)
   %2 = extractvalue { i256, i1 } %1, 0

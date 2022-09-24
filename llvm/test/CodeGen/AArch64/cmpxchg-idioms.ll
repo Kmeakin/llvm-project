@@ -89,8 +89,7 @@ define i1 @test_return_bool(i8* %value, i8 %oldValue, i8 %newValue) {
 ; OUTLINE-ATOMICS-NEXT:    bl ___aarch64_cas1_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    cmp w0, w19, uxtb
-; OUTLINE-ATOMICS-NEXT:    cset w8, eq
-; OUTLINE-ATOMICS-NEXT:    eor w0, w8, #0x1
+; OUTLINE-ATOMICS-NEXT:    cset w0, ne
 ; OUTLINE-ATOMICS-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; OUTLINE-ATOMICS-NEXT:    ret
   %pair = cmpxchg i8* %value, i8 %oldValue, i8 %newValue acq_rel monotonic

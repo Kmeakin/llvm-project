@@ -14485,12 +14485,62 @@ static SDValue performUADDVCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// (foldNot (CSET cc cond))  => (CSET !cc cond)
+// (foldNot (AND x y)) => (OR (foldNot x) (foldNot y))
+// (foldNot (OR x y))  => (AND (foldNot x) (foldNot y))
+static SDValue foldNot(SDValue N, SelectionDAG &DAG) {
+  switch (N.getOpcode()) {
+  case ISD::AND: {
+    auto LHS = foldNot(N.getOperand(0), DAG);
+    auto RHS = foldNot(N.getOperand(1), DAG);
+    if (LHS && RHS) {
+      SDLoc DL(N);
+      auto VTs = N->getVTList();
+      return DAG.getNode(ISD::AND, DL, VTs, LHS, RHS);
+    }
+    break;
+  }
+
+  case ISD::OR: {
+    auto LHS = foldNot(N.getOperand(0), DAG);
+    auto RHS = foldNot(N.getOperand(1), DAG);
+    if (LHS && RHS) {
+      SDLoc DL(N);
+      auto VTs = N->getVTList();
+      return DAG.getNode(ISD::OR, DL, VTs, LHS, RHS);
+    }
+    break;
+  }
+
+  case AArch64ISD::CSEL: {
+    if (auto CC = getCSETCondCode(N)) {
+      SDLoc DL(N);
+      auto NotCC = AArch64CC::getInvertedCondCode(*CC);
+      auto Cond = N->getOperand(3);
+      return makeCSET(DAG, DL, NotCC, Cond);
+    }
+    break;
+  }
+  }
+
+  return SDValue();
+}
 
 static SDValue performXorCombine(SDNode *N, SelectionDAG &DAG,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const AArch64Subtarget *Subtarget) {
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
+
+  if (isOneConstant(N->getOperand(0))) {
+    if (auto R = foldNot(N->getOperand(1), DAG))
+      return R;
+  }
+
+  if (isOneConstant(N->getOperand(1))) {
+    if (auto R = foldNot(N->getOperand(0), DAG))
+      return R;
+  }
 
   return foldVectorXorShiftIntoCmp(N, DAG, Subtarget);
 }
