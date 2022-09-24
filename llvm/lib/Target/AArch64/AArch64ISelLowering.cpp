@@ -131,6 +131,52 @@ EnableCombineMGatherIntrinsics("aarch64-enable-mgather-combine", cl::Hidden,
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
+static bool isCMP(SDValue Op) {
+  return Op.getOpcode() == AArch64ISD::SUBS &&
+         !Op.getNode()->hasAnyUseOfValue(0);
+}
+
+static SDValue makeCSET(SelectionDAG &DAG, SDLoc DL, AArch64CC::CondCode CC,
+                        SDValue Cond, EVT VT = MVT::i32) {
+  SDValue CCValue =
+      DAG.getConstant(AArch64CC::getInvertedCondCode(CC), DL, MVT_CC);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  return DAG.getNode(AArch64ISD::CSEL, DL, VT, Zero, One, CCValue, Cond);
+}
+
+// (CSEL 1 0 CC Cond) => CC
+// (CSEL 0 1 CC Cond) => !CC
+// (CSINC 0 0 CC Cond) => !CC
+static Optional<AArch64CC::CondCode> getCSETCondCode(SDValue Op) {
+  switch (Op->getOpcode()) {
+  case AArch64ISD::CSEL: {
+    auto CC = static_cast<AArch64CC::CondCode>(Op.getConstantOperandVal(2));
+    if (CC == AArch64CC::AL || CC == AArch64CC::NV)
+      return None;
+    SDValue OpLHS = Op.getOperand(0);
+    SDValue OpRHS = Op.getOperand(1);
+    if (isOneConstant(OpLHS) && isNullConstant(OpRHS))
+      return CC;
+    if (isNullConstant(OpLHS) && isOneConstant(OpRHS))
+      return getInvertedCondCode(CC);
+    break;
+  }
+  case AArch64ISD::CSINC: {
+    auto CC = static_cast<AArch64CC::CondCode>(Op.getConstantOperandVal(2));
+    if (CC == AArch64CC::AL || CC == AArch64CC::NV)
+      return None;
+    SDValue OpLHS = Op.getOperand(0);
+    SDValue OpRHS = Op.getOperand(1);
+    if (isNullConstant(OpLHS) && isNullConstant(OpRHS))
+      return getInvertedCondCode(CC);
+    break;
+  }
+  }
+
+  return None;
+}
+
 static inline EVT getPackedSVEVectorVT(EVT VT) {
   switch (VT.getSimpleVT().SimpleTy) {
   default:
@@ -15021,16 +15067,15 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
   if (!CSel0->hasOneUse() || !CSel1->hasOneUse())
     return SDValue();
 
-  if (!isNullConstant(CSel0.getOperand(0)) ||
-      !isOneConstant(CSel0.getOperand(1)) ||
-      !isNullConstant(CSel1.getOperand(0)) ||
-      !isOneConstant(CSel1.getOperand(1)))
+  Optional<AArch64CC::CondCode> OptCC0 = getCSETCondCode(CSel0);
+  Optional<AArch64CC::CondCode> OptCC1 = getCSETCondCode(CSel1);
+  if (!OptCC0 || !OptCC1)
     return SDValue();
+  AArch64CC::CondCode CC0 = *OptCC0;
+  AArch64CC::CondCode CC1 = *OptCC1;
 
   SDValue Cmp0 = CSel0.getOperand(3);
   SDValue Cmp1 = CSel1.getOperand(3);
-  AArch64CC::CondCode CC0 = (AArch64CC::CondCode)CSel0.getConstantOperandVal(2);
-  AArch64CC::CondCode CC1 = (AArch64CC::CondCode)CSel1.getConstantOperandVal(2);
   if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
     return SDValue();
 
@@ -15064,25 +15109,24 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
   SDLoc DL(N);
   SDValue CCmp;
 
+  SDValue X1 = Cmp1.getOperand(0);
+  SDValue Y1 = Cmp1.getOperand(1);
+
   if (N->getOpcode() == ISD::AND) {
-    AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
-    SDValue Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
-    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
-    SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
-    CCmp = DAG.getNode(Opcode, DL, MVT_CC, Cmp1.getOperand(0),
-                       Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
-  } else {
-    SDLoc DL(N);
     AArch64CC::CondCode InvCC1 = AArch64CC::getInvertedCondCode(CC1);
-    SDValue Condition = DAG.getConstant(CC0, DL, MVT_CC);
     unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(InvCC1);
     SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
-    CCmp = DAG.getNode(Opcode, DL, MVT_CC, Cmp1.getOperand(0),
-                       Cmp1.getOperand(1), NZCVOp, Condition, Cmp0);
+    SDValue Condition = DAG.getConstant(CC0, DL, MVT_CC);
+    CCmp = DAG.getNode(Opcode, DL, MVT_CC, X1, Y1, NZCVOp, Condition, Cmp0);
+  } else {
+    SDLoc DL(N);
+    AArch64CC::CondCode InvCC0 = AArch64CC::getInvertedCondCode(CC0);
+    unsigned NZCV = AArch64CC::getNZCVToSatisfyCondCode(CC1);
+    SDValue NZCVOp = DAG.getConstant(NZCV, DL, MVT::i32);
+    SDValue Condition = DAG.getConstant(InvCC0, DL, MVT_CC);
+    CCmp = DAG.getNode(Opcode, DL, MVT_CC, X1, Y1, NZCVOp, Condition, Cmp0);
   }
-  return DAG.getNode(AArch64ISD::CSEL, DL, VT, CSel0.getOperand(0),
-                     CSel0.getOperand(1), DAG.getConstant(CC1, DL, MVT::i32),
-                     CCmp);
+  return makeCSET(DAG, DL, CC1, CCmp);
 }
 
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
@@ -16158,29 +16202,6 @@ static SDValue performAddSubLongCombine(SDNode *N,
   }
 
   return DAG.getNode(N->getOpcode(), SDLoc(N), VT, LHS, RHS);
-}
-
-static bool isCMP(SDValue Op) {
-  return Op.getOpcode() == AArch64ISD::SUBS &&
-         !Op.getNode()->hasAnyUseOfValue(0);
-}
-
-// (CSEL 1 0 CC Cond) => CC
-// (CSEL 0 1 CC Cond) => !CC
-static Optional<AArch64CC::CondCode> getCSETCondCode(SDValue Op) {
-  if (Op.getOpcode() != AArch64ISD::CSEL)
-    return None;
-  auto CC = static_cast<AArch64CC::CondCode>(Op.getConstantOperandVal(2));
-  if (CC == AArch64CC::AL || CC == AArch64CC::NV)
-    return None;
-  SDValue OpLHS = Op.getOperand(0);
-  SDValue OpRHS = Op.getOperand(1);
-  if (isOneConstant(OpLHS) && isNullConstant(OpRHS))
-    return CC;
-  if (isNullConstant(OpLHS) && isOneConstant(OpRHS))
-    return getInvertedCondCode(CC);
-
-  return None;
 }
 
 // (ADC{S} l r (CMP (CSET HS carry) 1)) => (ADC{S} l r carry)
