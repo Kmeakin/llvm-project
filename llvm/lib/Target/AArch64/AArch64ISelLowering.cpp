@@ -20159,7 +20159,7 @@ static SDValue performFCCMPCombine(SDNode *N, SelectionDAG &DAG) {
   auto Y = FCMP.getOperand(0);
   auto C2 = FCMP.getOperand(1);
 
-  ConstantFPSDNode *ConstFloat2 = dyn_cast<ConstantFPSDNode>(C1);
+  ConstantFPSDNode *ConstFloat2 = dyn_cast<ConstantFPSDNode>(C2);
   if (!ConstFloat2 || !ConstFloat2->isZero())
     return SDValue();
 

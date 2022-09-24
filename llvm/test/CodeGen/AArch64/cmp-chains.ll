@@ -5,7 +5,7 @@
 ; Ensure chains of comparisons produce chains of `ccmp`, `ccmn` or `fccmp`.
 
 ; (x0 < x1) && (x2 > x3)
-define i1 @icmp_and2(i32 %0, i32 %1, i32 %2, i32 %3) {
+define i1 @icmp_and2(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; SDISEL-LABEL: icmp_and2:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    cmp w0, w1
@@ -21,14 +21,14 @@ define i1 @icmp_and2(i32 %0, i32 %1, i32 %2, i32 %3) {
 ; GISEL-NEXT:    cset w9, hi
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
-  %5 = icmp ult i32 %0, %1
-  %6 = icmp ugt i32 %2, %3
-  %7 = and i1 %5, %6
-  ret i1 %7
+  %cmp1 = icmp ult i32 %x0, %x1
+  %cmp2 = icmp ugt i32 %x2, %x3
+  %and1 = and i1 %cmp1, %cmp2
+  ret i1 %and1
 }
 
 ; (x0 < x1) && (x2 > x3) && (x4 != x5)
-define i1 @icmp_and3(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5) {
+define i1 @icmp_and3(i32 %x0, i32 %x1, i32 %x2, i32 %x3, i32 %x4, i32 %x5) {
 ; SDISEL-LABEL: icmp_and3:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    cmp w0, w1
@@ -44,55 +44,20 @@ define i1 @icmp_and3(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5) {
 ; GISEL-NEXT:    cmp w2, w3
 ; GISEL-NEXT:    cset w9, hi
 ; GISEL-NEXT:    cmp w4, w5
+; GISEL-NEXT:    cset w10, ne
 ; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    and w0, w8, w9
+; GISEL-NEXT:    and w0, w8, w10
 ; GISEL-NEXT:    ret
-  %7 = icmp ult i32 %0, %1
-  %8 = icmp ugt i32 %2, %3
-  %9 = and i1 %7, %8
-  %10 = icmp ne i32 %4, %5
-  %11 = and i1 %9, %10
-  ret i1 %11
-}
-
-; (x0 < x1) && (x2 > x3) && (x4 != x5) && (x6 == x7)
-define i1 @icmp_and4(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7) {
-; SDISEL-LABEL: icmp_and4:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w2, w3
-; SDISEL-NEXT:    ccmp w0, w1, #2, hi
-; SDISEL-NEXT:    ccmp w4, w5, #4, lo
-; SDISEL-NEXT:    ccmp w6, w7, #0, ne
-; SDISEL-NEXT:    cset w0, eq
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: icmp_and4:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmp w2, w3
-; GISEL-NEXT:    cset w8, hi
-; GISEL-NEXT:    cmp w0, w1
-; GISEL-NEXT:    cset w9, lo
-; GISEL-NEXT:    cmp w4, w5
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    cmp w6, w7
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    cset w9, eq
-; GISEL-NEXT:    and w0, w8, w9
-; GISEL-NEXT:    ret
-  %9 = icmp ugt i32 %2, %3
-  %10 = icmp ult i32 %0, %1
-  %11 = and i1 %9, %10
-  %12 = icmp ne i32 %4, %5
-  %13 = and i1 %11, %12
-  %14 = icmp eq i32 %6, %7
-  %15 = and i1 %13, %14
-  ret i1 %15
+  %cmp1 = icmp ult i32 %x0, %x1
+  %cmp2 = icmp ugt i32 %x2, %x3
+  %cmp3 = icmp ne i32 %x4, %x5
+  %and1 = and i1 %cmp1, %cmp2
+  %and2 = and i1 %and1, %cmp3
+  ret i1 %and2
 }
 
 ; (x0 < x1) || (x2 > x3)
-define i1 @icmp_or2(i32 %0, i32 %1, i32 %2, i32 %3) {
+define i1 @icmp_or2(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; SDISEL-LABEL: icmp_or2:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    cmp w0, w1
@@ -108,14 +73,14 @@ define i1 @icmp_or2(i32 %0, i32 %1, i32 %2, i32 %3) {
 ; GISEL-NEXT:    cset w9, ne
 ; GISEL-NEXT:    orr w0, w8, w9
 ; GISEL-NEXT:    ret
-  %5 = icmp ult i32 %0, %1
-  %6 = icmp ne i32 %2, %3
-  %7 = or i1 %5, %6
-  ret i1 %7
+  %cmp1 = icmp ult i32 %x0, %x1
+  %cmp2 = icmp ne i32 %x2, %x3
+  %or1 = or i1 %cmp1, %cmp2
+  ret i1 %or1
 }
 
 ; (x0 < x1) || (x2 > x3) || (x4 != x5)
-define i1 @icmp_or3(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5) {
+define i1 @icmp_or3(i32 %x0, i32 %x1, i32 %x2, i32 %x3, i32 %x4, i32 %x5) {
 ; SDISEL-LABEL: icmp_or3:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    cmp w0, w1
@@ -131,55 +96,93 @@ define i1 @icmp_or3(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5) {
 ; GISEL-NEXT:    cmp w2, w3
 ; GISEL-NEXT:    cset w9, hi
 ; GISEL-NEXT:    cmp w4, w5
+; GISEL-NEXT:    cset w10, ne
 ; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    orr w0, w8, w9
+; GISEL-NEXT:    orr w0, w8, w10
 ; GISEL-NEXT:    ret
-  %7 = icmp ult i32 %0, %1
-  %8 = icmp ugt i32 %2, %3
-  %9 = or i1 %7, %8
-  %10 = icmp ne i32 %4, %5
-  %11 = or i1 %9, %10
- ret i1 %11
+  %cmp1 = icmp ult i32 %x0, %x1
+  %cmp2 = icmp ugt i32 %x2, %x3
+  %cmp3 = icmp ne i32 %x4, %x5
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %or1, %cmp3
+ ret i1 %or2
 }
 
-; (x0 < x1) || (x2 > x3) || (x4 != x5) || (x6 == x7)
-define i1 @icmp_or4(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7) {
-; SDISEL-LABEL: icmp_or4:
+; (x0 == -x1) && (-x2 != x3)
+define i1 @icmn_and2(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; SDISEL-LABEL: icmn_and2:
 ; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    cmp w0, w1
-; SDISEL-NEXT:    ccmp w2, w3, #2, hs
-; SDISEL-NEXT:    ccmp w4, w5, #0, ls
-; SDISEL-NEXT:    ccmp w6, w7, #4, eq
-; SDISEL-NEXT:    cset w0, eq
+; SDISEL-NEXT:    cmn w0, w1
+; SDISEL-NEXT:    ccmn w1, w3, #4, eq
+; SDISEL-NEXT:    cset w0, ne
 ; SDISEL-NEXT:    ret
 ;
-; GISEL-LABEL: icmp_or4:
+; GISEL-LABEL: icmn_and2:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    cmp w0, w1
-; GISEL-NEXT:    cset w8, lo
-; GISEL-NEXT:    cmp w2, w3
-; GISEL-NEXT:    cset w9, hi
-; GISEL-NEXT:    cmp w4, w5
-; GISEL-NEXT:    orr w8, w8, w9
+; GISEL-NEXT:    cmn w0, w1
+; GISEL-NEXT:    cset w8, eq
+; GISEL-NEXT:    cmn w1, w3
 ; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    cmp w6, w7
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    cset w9, eq
+; GISEL-NEXT:    and w0, w8, w9
+; GISEL-NEXT:    ret
+  %neg-x1 = sub i32 0, %x1
+  %neg-x2 = sub i32 0, %x2
+  %cmp1 = icmp eq i32 %x0, %neg-x1
+  %cmp2 = icmp ne i32 %neg-x1, %x3
+  %and1 = and i1 %cmp1, %cmp2
+  ret i1 %and1
+}
+
+; (x0 == -x1) || (-x2 != x3)
+define i1 @icmn_or2(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
+; SDISEL-LABEL: icmn_or2:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    cmn w0, w1
+; SDISEL-NEXT:    ccmn w1, w3, #0, ne
+; SDISEL-NEXT:    cset w0, ne
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: icmn_or2:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    cmn w0, w1
+; GISEL-NEXT:    cset w8, eq
+; GISEL-NEXT:    cmn w1, w3
+; GISEL-NEXT:    cset w9, ne
 ; GISEL-NEXT:    orr w0, w8, w9
 ; GISEL-NEXT:    ret
-  %9 = icmp ult i32 %0, %1
-  %10 = icmp ugt i32 %2, %3
-  %11 = or i1 %9, %10
-  %12 = icmp ne i32 %4, %5
-  %13 = or i1 %11, %12
-  %14 = icmp eq i32 %6, %7
-  %15 = or i1 %13, %14
-  ret i1 %15
+  %neg-x1 = sub i32 0, %x1
+  %neg-x2 = sub i32 0, %x2
+  %cmp1 = icmp eq i32 %x0, %neg-x1
+  %cmp2 = icmp ne i32 %neg-x1, %x3
+  %ret = or i1 %cmp1, %cmp2
+  ret i1 %ret
+}
+
+; (x0 == -1) && (x1 == -2)
+define i1 @icmn_literal(i32 %x0, i32 %x1) {
+; SDISEL-LABEL: icmn_literal:
+; SDISEL:       // %bb.0:
+; SDISEL-NEXT:    cmn w0, #1
+; SDISEL-NEXT:    ccmn w1, #2, #4, eq
+; SDISEL-NEXT:    cset w0, ne
+; SDISEL-NEXT:    ret
+;
+; GISEL-LABEL: icmn_literal:
+; GISEL:       // %bb.0:
+; GISEL-NEXT:    cmn w0, #1
+; GISEL-NEXT:    cset w8, eq
+; GISEL-NEXT:    cmn w1, #2
+; GISEL-NEXT:    cset w9, ne
+; GISEL-NEXT:    and w0, w8, w9
+; GISEL-NEXT:    ret
+  %cmp1 = icmp eq i32 %x0, -1
+  %cmp2 = icmp ne i32 %x1, -2
+  %and1 = and i1 %cmp1, %cmp2
+  ret i1 %and1
 }
 
 ; (x0 != 0) || (x1 != 0)
-define i1 @true_or2(i32 %0, i32 %1) {
+define i1 @true_or2(i32 %x0, i32 %x1) {
 ; SDISEL-LABEL: true_or2:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    orr w8, w0, w1
@@ -195,14 +198,14 @@ define i1 @true_or2(i32 %0, i32 %1) {
 ; GISEL-NEXT:    cset w9, ne
 ; GISEL-NEXT:    orr w0, w8, w9
 ; GISEL-NEXT:    ret
-  %3 = icmp ne i32 %0, 0
-  %4 = icmp ne i32 %1, 0
-  %5 = or i1 %3, %4
-  ret i1 %5
+  %cmp1 = icmp ne i32 %x0, 0
+  %cmp2 = icmp ne i32 %x1, 0
+  %or1 = or i1 %cmp1, %cmp2
+  ret i1 %or1
 }
 
 ; (x0 != 0) || (x1 != 0) || (x2 != 0)
-define i1 @true_or3(i32 %0, i32 %1, i32 %2) {
+define i1 @true_or3(i32 %x0, i32 %x1, i32 %x2) {
 ; SDISEL-LABEL: true_or3:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    orr w8, w0, w1
@@ -218,20 +221,20 @@ define i1 @true_or3(i32 %0, i32 %1, i32 %2) {
 ; GISEL-NEXT:    cmp w1, #0
 ; GISEL-NEXT:    cset w9, ne
 ; GISEL-NEXT:    cmp w2, #0
+; GISEL-NEXT:    cset w10, ne
 ; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    orr w0, w8, w9
+; GISEL-NEXT:    orr w0, w8, w10
 ; GISEL-NEXT:    ret
-  %4 = icmp ne i32 %0, 0
-  %5 = icmp ne i32 %1, 0
-  %6 = or i1 %4, %5
-  %7 = icmp ne i32 %2, 0
-  %8 = or i1 %6, %7
-  ret i1 %8
+  %cmp1 = icmp ne i32 %x0, 0
+  %cmp2 = icmp ne i32 %x1, 0
+  %cmp3 = icmp ne i32 %x2, 0
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %or1, %cmp3
+  ret i1 %or2
 }
 
 ; (x0 < x1) && (x2 > x3)
-define i1 @fcmp_and2(float %0, float %1, float %2, float %3) {
+define i1 @fcmp_and2(float %x0, float %x1, float %x2, float %x3) {
 ; SDISEL-LABEL: fcmp_and2:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    fcmp s0, s1
@@ -247,14 +250,14 @@ define i1 @fcmp_and2(float %0, float %1, float %2, float %3) {
 ; GISEL-NEXT:    cset w9, hi
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
-  %5 = fcmp ult float %0, %1
-  %6 = fcmp ugt float %2, %3
-  %7 = and i1 %5, %6
-  ret i1 %7
+  %cmp1 = fcmp ult float %x0, %x1
+  %cmp2 = fcmp ugt float %x2, %x3
+  %and1 = and i1 %cmp1, %cmp2
+  ret i1 %and1
 }
 
 ; (x0 < x1) && (x2 > x3) && (x4 != x5)
-define i1 @fcmp_and3(float %0, float %1, float %2, float %3, float %4, float %5) {
+define i1 @fcmp_and3(float %x0, float %x1, float %x2, float %x3, float %x4, float %x5) {
 ; SDISEL-LABEL: fcmp_and3:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    fcmp s0, s1
@@ -274,51 +277,16 @@ define i1 @fcmp_and3(float %0, float %1, float %2, float %3, float %4, float %5)
 ; GISEL-NEXT:    cset w9, ne
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
-  %7 = fcmp ult float %0, %1
-  %8 = fcmp ugt float %2, %3
-  %9 = and i1 %7, %8
-  %10 = fcmp une float %4, %5
-  %11 = and i1 %9, %10
-  ret i1 %11
-}
-
-; (x0 < x1) && (x2 > x3) && (x4 != x5) && (x6 == x7)
-define i1 @fcmp_and4(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7) {
-; SDISEL-LABEL: fcmp_and4:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    fcmp s2, s3
-; SDISEL-NEXT:    fccmp s0, s1, #0, hi
-; SDISEL-NEXT:    fccmp s4, s5, #4, lt
-; SDISEL-NEXT:    fccmp s6, s7, #0, ne
-; SDISEL-NEXT:    cset w0, eq
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: fcmp_and4:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcmp s2, s3
-; GISEL-NEXT:    cset w8, hi
-; GISEL-NEXT:    fcmp s0, s1
-; GISEL-NEXT:    cset w9, lt
-; GISEL-NEXT:    fcmp s4, s5
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    fcmp s6, s7
-; GISEL-NEXT:    and w8, w8, w9
-; GISEL-NEXT:    cset w9, eq
-; GISEL-NEXT:    and w0, w8, w9
-; GISEL-NEXT:    ret
-  %9 = fcmp ugt float %2, %3
-  %10 = fcmp ult float %0, %1
-  %11 = and i1 %9, %10
-  %12 = fcmp une float %4, %5
-  %13 = and i1 %11, %12
-  %14 = fcmp oeq float %6, %7
-  %15 = and i1 %13, %14
-  ret i1 %15
+  %cmp1 = fcmp ult float %x0, %x1
+  %cmp2 = fcmp ugt float %x2, %x3
+  %cmp3 = fcmp une float %x4, %x5
+  %and1 = and i1 %cmp1, %cmp2
+  %and2 = and i1 %and1, %cmp3
+  ret i1 %and2
 }
 
 ; (x0 < x1) || (x2 > x3)
-define i1 @fcmp_or2(float %0, float %1, float %2, float %3) {
+define i1 @fcmp_or2(float %x0, float %x1, float %x2, float %x3) {
 ; SDISEL-LABEL: fcmp_or2:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    fcmp s0, s1
@@ -334,14 +302,14 @@ define i1 @fcmp_or2(float %0, float %1, float %2, float %3) {
 ; GISEL-NEXT:    cset w9, hi
 ; GISEL-NEXT:    orr w0, w8, w9
 ; GISEL-NEXT:    ret
-  %5 = fcmp ult float %0, %1
-  %6 = fcmp ugt float %2, %3
-  %7 = or i1 %5, %6
-  ret i1 %7
+  %cmp1 = fcmp ult float %x0, %x1
+  %cmp2 = fcmp ugt float %x2, %x3
+  %or1 = or i1 %cmp1, %cmp2
+  ret i1 %or1
 }
 
 ; (x0 < x1) || (x2 > x3) || (x4 != x5)
-define i1 @fcmp_or3(float %0, float %1, float %2, float %3, float %4, float %5) {
+define i1 @fcmp_or3(float %x0, float %x1, float %x2, float %x3, float %x4, float %x5) {
 ; SDISEL-LABEL: fcmp_or3:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    fcmp s0, s1
@@ -361,51 +329,16 @@ define i1 @fcmp_or3(float %0, float %1, float %2, float %3, float %4, float %5) 
 ; GISEL-NEXT:    cset w9, ne
 ; GISEL-NEXT:    orr w0, w8, w9
 ; GISEL-NEXT:    ret
-  %7 = fcmp ult float %0, %1
-  %8 = fcmp ugt float %2, %3
-  %9 = or i1 %7, %8
-  %10 = fcmp une float %4, %5
-  %11 = or i1 %9, %10
-  ret i1 %11
-}
-
-; (x0 < x1) || (x2 > x3) || (x4 != x5) || (x6 == x7)
-define i1 @fcmp_or4(float %0, float %1, float %2, float %3, float %4, float %5, float %6, float %7) {
-; SDISEL-LABEL: fcmp_or4:
-; SDISEL:       // %bb.0:
-; SDISEL-NEXT:    fcmp s2, s3
-; SDISEL-NEXT:    fccmp s0, s1, #8, ls
-; SDISEL-NEXT:    fccmp s4, s5, #0, ge
-; SDISEL-NEXT:    fccmp s6, s7, #4, eq
-; SDISEL-NEXT:    cset w0, eq
-; SDISEL-NEXT:    ret
-;
-; GISEL-LABEL: fcmp_or4:
-; GISEL:       // %bb.0:
-; GISEL-NEXT:    fcmp s2, s3
-; GISEL-NEXT:    cset w8, hi
-; GISEL-NEXT:    fcmp s0, s1
-; GISEL-NEXT:    cset w9, lt
-; GISEL-NEXT:    fcmp s4, s5
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    cset w9, ne
-; GISEL-NEXT:    fcmp s6, s7
-; GISEL-NEXT:    orr w8, w8, w9
-; GISEL-NEXT:    cset w9, eq
-; GISEL-NEXT:    orr w0, w8, w9
-; GISEL-NEXT:    ret
-  %9 = fcmp ugt float %2, %3
-  %10 = fcmp ult float %0, %1
-  %11 = or i1 %9, %10
-  %12 = fcmp une float %4, %5
-  %13 = or i1 %11, %12
-  %14 = fcmp oeq float %6, %7
-  %15 = or i1 %13, %14
-  ret i1 %15
+  %cmp1 = fcmp ult float %x0, %x1
+  %cmp2 = fcmp ugt float %x2, %x3
+  %cmp3 = fcmp une float %x4, %x5
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %or1, %cmp3
+  ret i1 %or2
 }
 
 ; (x0 == 0.0) && (x1 == 0.0)
-define i1 @fcmp_zero2(float %0, float %1) {
+define i1 @fcmp_zero2(float %x0, float %x1) {
 ; SDISEL-LABEL: fcmp_zero2:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    fcmp s0, #0.0
@@ -421,14 +354,14 @@ define i1 @fcmp_zero2(float %0, float %1) {
 ; GISEL-NEXT:    cset w9, eq
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
-  %3 = fcmp oeq float %0, 0.0
-  %4 = fcmp oeq float %1, 0.0
-  %5 = and i1 %3, %4
-  ret i1 %5
+  %cmp1 = fcmp oeq float %x0, 0.0
+  %cmp2 = fcmp oeq float %x1, 0.0
+  %and1 = and i1 %cmp1, %cmp2
+  ret i1 %and1
 }
 
 ; (x0 == 0.0) && (x1 == 0.0) && (x2 == 0.0)
-define i1 @fcmp_zero3(float %0, float %1, float %2) {
+define i1 @fcmp_zero3(float %x0, float %x1, float %x2) {
 ; SDISEL-LABEL: fcmp_zero3:
 ; SDISEL:       // %bb.0:
 ; SDISEL-NEXT:    fcmp s0, #0.0
@@ -449,12 +382,12 @@ define i1 @fcmp_zero3(float %0, float %1, float %2) {
 ; GISEL-NEXT:    cset w9, eq
 ; GISEL-NEXT:    and w0, w8, w9
 ; GISEL-NEXT:    ret
-  %4 = fcmp oeq float %0, 0.0
-  %5 = fcmp oeq float %1, 0.0
-  %6 = and i1 %4, %5
-  %7 = fcmp oeq float %2, 0.0
-  %8 = and i1 %6, %7
-  ret i1 %8
+  %cmp1 = fcmp oeq float %x0, 0.0
+  %cmp2 = fcmp oeq float %x1, 0.0
+  %cmp3 = fcmp oeq float %x2, 0.0
+  %and1 = and i1 %cmp1, %cmp2
+  %and2 = and i1 %and1, %cmp3
+  ret i1 %and2
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}
