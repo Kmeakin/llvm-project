@@ -322,40 +322,38 @@ define <4 x i32> @umulo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) nounwind {
 ; CHECK-LABEL: umulo_v2i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul x8, x7, x2
-; CHECK-NEXT:    umulh x9, x2, x6
-; CHECK-NEXT:    madd x8, x3, x6, x8
-; CHECK-NEXT:    umulh x10, x3, x6
-; CHECK-NEXT:    adds x8, x9, x8
-; CHECK-NEXT:    umulh x11, x7, x2
-; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    umulh x8, x1, x4
+; CHECK-NEXT:    ccmp x5, #0, #4, ne
+; CHECK-NEXT:    mul x9, x5, x0
+; CHECK-NEXT:    umulh x11, x3, x6
+; CHECK-NEXT:    ldr x13, [sp]
+; CHECK-NEXT:    madd x9, x1, x4, x9
+; CHECK-NEXT:    ccmp xzr, x8, #0, eq
+; CHECK-NEXT:    umulh x8, x5, x0
+; CHECK-NEXT:    mul x12, x7, x2
+; CHECK-NEXT:    ccmp xzr, x8, #0, eq
+; CHECK-NEXT:    umulh x8, x0, x4
+; CHECK-NEXT:    madd x12, x3, x6, x12
+; CHECK-NEXT:    ccmn x8, x9, #2, eq
+; CHECK-NEXT:    add x8, x8, x9
+; CHECK-NEXT:    cset w10, hs
 ; CHECK-NEXT:    cmp x3, #0
 ; CHECK-NEXT:    ccmp x7, #0, #4, ne
-; CHECK-NEXT:    umulh x13, x1, x4
-; CHECK-NEXT:    ccmp xzr, x10, #0, eq
-; CHECK-NEXT:    mul x10, x5, x0
-; CHECK-NEXT:    madd x10, x1, x4, x10
+; CHECK-NEXT:    fmov s0, w10
 ; CHECK-NEXT:    ccmp xzr, x11, #0, eq
-; CHECK-NEXT:    umulh x11, x0, x4
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    adds x10, x11, x10
-; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    ccmp x5, #0, #4, ne
-; CHECK-NEXT:    orr w9, w12, w9
+; CHECK-NEXT:    umulh x11, x7, x2
+; CHECK-NEXT:    ccmp xzr, x11, #0, eq
+; CHECK-NEXT:    umulh x11, x2, x6
+; CHECK-NEXT:    ccmn x11, x12, #2, eq
+; CHECK-NEXT:    add x11, x11, x12
 ; CHECK-NEXT:    mul x12, x0, x4
-; CHECK-NEXT:    ccmp xzr, x13, #0, eq
-; CHECK-NEXT:    umulh x13, x5, x0
-; CHECK-NEXT:    ccmp xzr, x13, #0, eq
-; CHECK-NEXT:    cset w13, ne
-; CHECK-NEXT:    orr w11, w13, w11
-; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    ldr x11, [sp]
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    mul x9, x2, x6
-; CHECK-NEXT:    stp x12, x10, [x11]
+; CHECK-NEXT:    cset w10, hs
+; CHECK-NEXT:    stp x12, x8, [x13]
+; CHECK-NEXT:    mov v0.s[1], w10
+; CHECK-NEXT:    mul x10, x2, x6
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
-; CHECK-NEXT:    stp x9, x8, [x11, #16]
+; CHECK-NEXT:    stp x10, x11, [x13, #16]
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret
   %t = call {<2 x i128>, <2 x i1>} @llvm.umul.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)

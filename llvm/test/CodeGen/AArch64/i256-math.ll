@@ -324,66 +324,64 @@ define { i256, i8 } @u256_checked_mul(i256 %x, i256 %y) {
 ; CHECK-LABEL: u256_checked_mul:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul x8, x1, x6
-; CHECK-NEXT:    orr x17, x6, x7
-; CHECK-NEXT:    mul x9, x5, x2
-; CHECK-NEXT:    madd x8, x7, x0, x8
-; CHECK-NEXT:    umulh x10, x6, x0
-; CHECK-NEXT:    madd x9, x3, x4, x9
-; CHECK-NEXT:    umulh x11, x2, x4
-; CHECK-NEXT:    adds x8, x10, x8
-; CHECK-NEXT:    mul x10, x6, x0
-; CHECK-NEXT:    cset w12, hs
-; CHECK-NEXT:    mul x13, x2, x4
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    cset w14, hs
-; CHECK-NEXT:    umulh x15, x0, x4
-; CHECK-NEXT:    adds x10, x13, x10
-; CHECK-NEXT:    mul x13, x1, x4
-; CHECK-NEXT:    umulh x11, x1, x4
-; CHECK-NEXT:    adc x16, x9, x8
-; CHECK-NEXT:    mul x8, x0, x5
-; CHECK-NEXT:    adds x9, x13, x15
-; CHECK-NEXT:    umulh x13, x0, x5
-; CHECK-NEXT:    cinc x11, x11, hs
-; CHECK-NEXT:    adds x8, x8, x9
-; CHECK-NEXT:    cinc x9, x13, hs
-; CHECK-NEXT:    mul x13, x1, x5
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    umulh x11, x1, x5
+; CHECK-NEXT:    umulh x12, x6, x0
+; CHECK-NEXT:    madd x11, x7, x0, x8
+; CHECK-NEXT:    mul x8, x5, x2
+; CHECK-NEXT:    umulh x14, x2, x4
+; CHECK-NEXT:    add x10, x12, x11
+; CHECK-NEXT:    madd x13, x3, x4, x8
+; CHECK-NEXT:    mul x8, x6, x0
+; CHECK-NEXT:    mul x9, x2, x4
+; CHECK-NEXT:    add x16, x14, x13
+; CHECK-NEXT:    umulh x17, x0, x4
+; CHECK-NEXT:    adds x9, x9, x8
+; CHECK-NEXT:    mul x8, x1, x4
+; CHECK-NEXT:    umulh x15, x1, x4
+; CHECK-NEXT:    adc x10, x16, x10
+; CHECK-NEXT:    mul x16, x0, x5
+; CHECK-NEXT:    adds x8, x8, x17
+; CHECK-NEXT:    umulh x17, x0, x5
+; CHECK-NEXT:    cinc x15, x15, hs
+; CHECK-NEXT:    adds x8, x16, x8
+; CHECK-NEXT:    cinc x16, x17, hs
+; CHECK-NEXT:    mul x17, x1, x5
+; CHECK-NEXT:    adds x15, x15, x16
+; CHECK-NEXT:    umulh x16, x1, x5
+; CHECK-NEXT:    cset w18, hs
+; CHECK-NEXT:    adds x15, x17, x15
+; CHECK-NEXT:    adc x16, x16, x18
+; CHECK-NEXT:    adds x9, x15, x9
+; CHECK-NEXT:    adcs x10, x16, x10
+; CHECK-NEXT:    umulh x16, x3, x4
 ; CHECK-NEXT:    cset w15, hs
-; CHECK-NEXT:    adds x9, x13, x9
-; CHECK-NEXT:    adc x11, x11, x15
-; CHECK-NEXT:    adds x9, x9, x10
-; CHECK-NEXT:    adcs x10, x11, x16
-; CHECK-NEXT:    umulh x13, x7, x0
-; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    cmp x7, #0
-; CHECK-NEXT:    ccmp x1, #0, #4, ne
-; CHECK-NEXT:    umulh x15, x3, x4
-; CHECK-NEXT:    mul x0, x0, x4
-; CHECK-NEXT:    ccmp xzr, x13, #0, eq
-; CHECK-NEXT:    umulh x13, x1, x6
-; CHECK-NEXT:    mov x1, x8
-; CHECK-NEXT:    ccmp xzr, x13, #0, eq
-; CHECK-NEXT:    cset w13, ne
 ; CHECK-NEXT:    cmp x3, #0
 ; CHECK-NEXT:    ccmp x5, #0, #4, ne
-; CHECK-NEXT:    orr w12, w13, w12
-; CHECK-NEXT:    ccmp xzr, x15, #0, eq
-; CHECK-NEXT:    umulh x15, x5, x2
-; CHECK-NEXT:    ccmp xzr, x15, #0, eq
-; CHECK-NEXT:    orr x15, x2, x3
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    umulh x16, x5, x2
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    orr x16, x6, x7
+; CHECK-NEXT:    ccmn x14, x13, #2, eq
+; CHECK-NEXT:    orr x13, x2, x3
 ; CHECK-NEXT:    mov x2, x9
 ; CHECK-NEXT:    mov x3, x10
-; CHECK-NEXT:    cset w16, ne
-; CHECK-NEXT:    cmp x15, #0
-; CHECK-NEXT:    ccmp x17, #0, #4, ne
-; CHECK-NEXT:    orr w13, w16, w14
-; CHECK-NEXT:    cset w14, ne
-; CHECK-NEXT:    orr w13, w14, w13
-; CHECK-NEXT:    orr w12, w13, w12
-; CHECK-NEXT:    orr w11, w12, w11
+; CHECK-NEXT:    cset w14, hs
+; CHECK-NEXT:    cmp x13, #0
+; CHECK-NEXT:    ccmp x16, #0, #4, ne
+; CHECK-NEXT:    umulh x16, x7, x0
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    cmp x7, #0
+; CHECK-NEXT:    ccmp x1, #0, #4, ne
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    umulh x16, x1, x6
+; CHECK-NEXT:    mov x1, x8
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    ccmn x12, x11, #2, eq
+; CHECK-NEXT:    orr w11, w13, w14
+; CHECK-NEXT:    cset w12, hs
+; CHECK-NEXT:    orr w11, w11, w12
 ; CHECK-NEXT:    mov w12, #1
+; CHECK-NEXT:    orr w11, w11, w15
 ; CHECK-NEXT:    bic w4, w12, w11
 ; CHECK-NEXT:    ret
   %1 = tail call { i256, i1 } @llvm.umul.with.overflow.i256(i256 %x, i256 %y)
@@ -400,65 +398,63 @@ define { i256, i8 } @u256_overflowing_mul(i256 %x, i256 %y) {
 ; CHECK-LABEL: u256_overflowing_mul:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mul x8, x1, x6
-; CHECK-NEXT:    orr x17, x6, x7
-; CHECK-NEXT:    mul x9, x5, x2
-; CHECK-NEXT:    madd x8, x7, x0, x8
-; CHECK-NEXT:    umulh x10, x6, x0
-; CHECK-NEXT:    madd x9, x3, x4, x9
-; CHECK-NEXT:    umulh x11, x2, x4
-; CHECK-NEXT:    adds x8, x10, x8
-; CHECK-NEXT:    mul x10, x6, x0
-; CHECK-NEXT:    cset w12, hs
-; CHECK-NEXT:    mul x13, x2, x4
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    cset w14, hs
-; CHECK-NEXT:    umulh x15, x0, x4
-; CHECK-NEXT:    adds x10, x13, x10
-; CHECK-NEXT:    mul x13, x1, x4
-; CHECK-NEXT:    umulh x11, x1, x4
-; CHECK-NEXT:    adc x16, x9, x8
-; CHECK-NEXT:    mul x8, x0, x5
-; CHECK-NEXT:    adds x9, x13, x15
-; CHECK-NEXT:    umulh x13, x0, x5
-; CHECK-NEXT:    cinc x11, x11, hs
-; CHECK-NEXT:    adds x8, x8, x9
-; CHECK-NEXT:    cinc x9, x13, hs
-; CHECK-NEXT:    mul x13, x1, x5
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    umulh x11, x1, x5
+; CHECK-NEXT:    umulh x12, x6, x0
+; CHECK-NEXT:    madd x11, x7, x0, x8
+; CHECK-NEXT:    mul x8, x5, x2
+; CHECK-NEXT:    umulh x14, x2, x4
+; CHECK-NEXT:    add x10, x12, x11
+; CHECK-NEXT:    madd x13, x3, x4, x8
+; CHECK-NEXT:    mul x8, x6, x0
+; CHECK-NEXT:    mul x9, x2, x4
+; CHECK-NEXT:    add x16, x14, x13
+; CHECK-NEXT:    umulh x17, x0, x4
+; CHECK-NEXT:    adds x9, x9, x8
+; CHECK-NEXT:    mul x8, x1, x4
+; CHECK-NEXT:    umulh x15, x1, x4
+; CHECK-NEXT:    adc x10, x16, x10
+; CHECK-NEXT:    mul x16, x0, x5
+; CHECK-NEXT:    adds x8, x8, x17
+; CHECK-NEXT:    umulh x17, x0, x5
+; CHECK-NEXT:    cinc x15, x15, hs
+; CHECK-NEXT:    adds x8, x16, x8
+; CHECK-NEXT:    cinc x16, x17, hs
+; CHECK-NEXT:    mul x17, x1, x5
+; CHECK-NEXT:    adds x15, x15, x16
+; CHECK-NEXT:    umulh x16, x1, x5
+; CHECK-NEXT:    cset w18, hs
+; CHECK-NEXT:    adds x15, x17, x15
+; CHECK-NEXT:    adc x16, x16, x18
+; CHECK-NEXT:    adds x9, x15, x9
+; CHECK-NEXT:    adcs x10, x16, x10
+; CHECK-NEXT:    umulh x16, x3, x4
 ; CHECK-NEXT:    cset w15, hs
-; CHECK-NEXT:    adds x9, x13, x9
-; CHECK-NEXT:    adc x11, x11, x15
-; CHECK-NEXT:    adds x9, x9, x10
-; CHECK-NEXT:    adcs x10, x11, x16
-; CHECK-NEXT:    umulh x13, x7, x0
-; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    cmp x7, #0
-; CHECK-NEXT:    ccmp x1, #0, #4, ne
-; CHECK-NEXT:    umulh x15, x3, x4
-; CHECK-NEXT:    mul x0, x0, x4
-; CHECK-NEXT:    ccmp xzr, x13, #0, eq
-; CHECK-NEXT:    umulh x13, x1, x6
-; CHECK-NEXT:    mov x1, x8
-; CHECK-NEXT:    ccmp xzr, x13, #0, eq
-; CHECK-NEXT:    cset w13, ne
 ; CHECK-NEXT:    cmp x3, #0
 ; CHECK-NEXT:    ccmp x5, #0, #4, ne
-; CHECK-NEXT:    orr w12, w13, w12
-; CHECK-NEXT:    ccmp xzr, x15, #0, eq
-; CHECK-NEXT:    umulh x15, x5, x2
-; CHECK-NEXT:    ccmp xzr, x15, #0, eq
-; CHECK-NEXT:    orr x15, x2, x3
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    umulh x16, x5, x2
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    orr x16, x6, x7
+; CHECK-NEXT:    ccmn x14, x13, #2, eq
+; CHECK-NEXT:    orr x13, x2, x3
 ; CHECK-NEXT:    mov x2, x9
 ; CHECK-NEXT:    mov x3, x10
-; CHECK-NEXT:    cset w16, ne
-; CHECK-NEXT:    cmp x15, #0
-; CHECK-NEXT:    ccmp x17, #0, #4, ne
-; CHECK-NEXT:    orr w13, w16, w14
-; CHECK-NEXT:    cset w14, ne
-; CHECK-NEXT:    orr w13, w14, w13
-; CHECK-NEXT:    orr w12, w13, w12
-; CHECK-NEXT:    orr w11, w12, w11
+; CHECK-NEXT:    cset w14, hs
+; CHECK-NEXT:    cmp x13, #0
+; CHECK-NEXT:    ccmp x16, #0, #4, ne
+; CHECK-NEXT:    umulh x16, x7, x0
+; CHECK-NEXT:    mul x0, x0, x4
+; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    cmp x7, #0
+; CHECK-NEXT:    ccmp x1, #0, #4, ne
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    umulh x16, x1, x6
+; CHECK-NEXT:    mov x1, x8
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    ccmn x12, x11, #2, eq
+; CHECK-NEXT:    orr w11, w13, w14
+; CHECK-NEXT:    cset w12, hs
+; CHECK-NEXT:    orr w11, w11, w12
+; CHECK-NEXT:    orr w11, w11, w15
 ; CHECK-NEXT:    and w4, w11, #0x1
 ; CHECK-NEXT:    ret
   %1 = tail call { i256, i1 } @llvm.umul.with.overflow.i256(i256 %x, i256 %y)
@@ -479,62 +475,60 @@ define i256 @u256_saturating_mul(i256 %x, i256 %y) {
 ; CHECK-NEXT:    umulh x10, x6, x0
 ; CHECK-NEXT:    madd x9, x3, x4, x9
 ; CHECK-NEXT:    umulh x11, x2, x4
-; CHECK-NEXT:    adds x8, x10, x8
-; CHECK-NEXT:    mul x10, x6, x0
-; CHECK-NEXT:    cset w12, hs
+; CHECK-NEXT:    add x14, x10, x8
+; CHECK-NEXT:    mul x12, x6, x0
 ; CHECK-NEXT:    mul x13, x2, x4
-; CHECK-NEXT:    adds x9, x11, x9
-; CHECK-NEXT:    cset w14, hs
-; CHECK-NEXT:    umulh x15, x0, x4
-; CHECK-NEXT:    adds x10, x13, x10
+; CHECK-NEXT:    add x16, x11, x9
+; CHECK-NEXT:    umulh x17, x0, x4
+; CHECK-NEXT:    adds x12, x13, x12
 ; CHECK-NEXT:    mul x13, x1, x4
-; CHECK-NEXT:    umulh x11, x1, x4
-; CHECK-NEXT:    adc x8, x9, x8
-; CHECK-NEXT:    mul x9, x0, x5
-; CHECK-NEXT:    adds x13, x13, x15
-; CHECK-NEXT:    umulh x15, x0, x5
-; CHECK-NEXT:    cinc x11, x11, hs
-; CHECK-NEXT:    adds x9, x9, x13
-; CHECK-NEXT:    cinc x13, x15, hs
-; CHECK-NEXT:    mul x15, x1, x5
-; CHECK-NEXT:    adds x11, x11, x13
-; CHECK-NEXT:    umulh x13, x1, x5
-; CHECK-NEXT:    cset w16, hs
-; CHECK-NEXT:    adds x11, x15, x11
-; CHECK-NEXT:    adc x13, x13, x16
-; CHECK-NEXT:    adds x10, x11, x10
-; CHECK-NEXT:    adcs x8, x13, x8
-; CHECK-NEXT:    umulh x13, x7, x0
-; CHECK-NEXT:    cset w11, hs
-; CHECK-NEXT:    cmp x7, #0
-; CHECK-NEXT:    ccmp x1, #0, #4, ne
-; CHECK-NEXT:    umulh x15, x3, x4
-; CHECK-NEXT:    orr x16, x2, x3
-; CHECK-NEXT:    ccmp xzr, x13, #0, eq
-; CHECK-NEXT:    umulh x13, x1, x6
-; CHECK-NEXT:    ccmp xzr, x13, #0, eq
-; CHECK-NEXT:    cset w13, ne
+; CHECK-NEXT:    umulh x15, x1, x4
+; CHECK-NEXT:    adc x14, x16, x14
+; CHECK-NEXT:    mul x16, x0, x5
+; CHECK-NEXT:    adds x13, x13, x17
+; CHECK-NEXT:    umulh x17, x0, x5
+; CHECK-NEXT:    cinc x15, x15, hs
+; CHECK-NEXT:    adds x13, x16, x13
+; CHECK-NEXT:    cinc x16, x17, hs
+; CHECK-NEXT:    mul x17, x1, x5
+; CHECK-NEXT:    adds x15, x15, x16
+; CHECK-NEXT:    umulh x16, x1, x5
+; CHECK-NEXT:    cset w18, hs
+; CHECK-NEXT:    adds x15, x17, x15
+; CHECK-NEXT:    adc x16, x16, x18
+; CHECK-NEXT:    adds x12, x15, x12
+; CHECK-NEXT:    adcs x14, x16, x14
+; CHECK-NEXT:    umulh x16, x3, x4
+; CHECK-NEXT:    cset w15, hs
 ; CHECK-NEXT:    cmp x3, #0
 ; CHECK-NEXT:    ccmp x5, #0, #4, ne
-; CHECK-NEXT:    orr w12, w13, w12
-; CHECK-NEXT:    ccmp xzr, x15, #0, eq
-; CHECK-NEXT:    umulh x15, x5, x2
-; CHECK-NEXT:    ccmp xzr, x15, #0, eq
-; CHECK-NEXT:    orr x15, x6, x7
-; CHECK-NEXT:    cset w17, ne
-; CHECK-NEXT:    cmp x16, #0
-; CHECK-NEXT:    ccmp x15, #0, #4, ne
-; CHECK-NEXT:    orr w14, w17, w14
-; CHECK-NEXT:    cset w15, ne
-; CHECK-NEXT:    orr w13, w15, w14
-; CHECK-NEXT:    orr w12, w13, w12
-; CHECK-NEXT:    mul x13, x0, x4
-; CHECK-NEXT:    orr w11, w12, w11
-; CHECK-NEXT:    tst w11, #0x1
-; CHECK-NEXT:    csinv x0, x13, xzr, eq
-; CHECK-NEXT:    csinv x1, x9, xzr, eq
-; CHECK-NEXT:    csinv x3, x8, xzr, eq
-; CHECK-NEXT:    csinv x2, x10, xzr, eq
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    umulh x16, x5, x2
+; CHECK-NEXT:    ccmp xzr, x16, #0, eq
+; CHECK-NEXT:    ccmn x11, x9, #2, eq
+; CHECK-NEXT:    orr x11, x2, x3
+; CHECK-NEXT:    orr x9, x6, x7
+; CHECK-NEXT:    cset w16, hs
+; CHECK-NEXT:    cmp x11, #0
+; CHECK-NEXT:    ccmp x9, #0, #4, ne
+; CHECK-NEXT:    umulh x11, x7, x0
+; CHECK-NEXT:    cset w9, ne
+; CHECK-NEXT:    cmp x7, #0
+; CHECK-NEXT:    ccmp x1, #0, #4, ne
+; CHECK-NEXT:    ccmp xzr, x11, #0, eq
+; CHECK-NEXT:    umulh x11, x1, x6
+; CHECK-NEXT:    ccmp xzr, x11, #0, eq
+; CHECK-NEXT:    ccmn x10, x8, #2, eq
+; CHECK-NEXT:    orr w8, w9, w16
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    orr w8, w8, w9
+; CHECK-NEXT:    mul x9, x0, x4
+; CHECK-NEXT:    orr w8, w8, w15
+; CHECK-NEXT:    tst w8, #0x1
+; CHECK-NEXT:    csinv x0, x9, xzr, eq
+; CHECK-NEXT:    csinv x1, x13, xzr, eq
+; CHECK-NEXT:    csinv x3, x14, xzr, eq
+; CHECK-NEXT:    csinv x2, x12, xzr, eq
 ; CHECK-NEXT:    ret
   %1 = tail call { i256, i1 } @llvm.umul.with.overflow.i256(i256 %x, i256 %y)
   %2 = extractvalue { i256, i1 } %1, 0

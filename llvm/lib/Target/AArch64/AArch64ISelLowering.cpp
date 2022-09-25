@@ -15397,8 +15397,6 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
 
   SDValue Cmp0 = CSel0.getOperand(3);
   SDValue Cmp1 = CSel1.getOperand(3);
-  if (!Cmp0->hasOneUse() || !Cmp1->hasOneUse())
-    return SDValue();
 
   unsigned Opcode;
   bool Swap = false;
@@ -15426,6 +15424,9 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
     std::swap(Cmp0, Cmp1);
     std::swap(CC0, CC1);
   }
+
+  if (!Cmp0->hasOneUse())
+    return SDValue();
 
   SDLoc DL(N);
   SDValue CCmp;
