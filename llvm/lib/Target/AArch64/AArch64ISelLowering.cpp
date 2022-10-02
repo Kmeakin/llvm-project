@@ -146,6 +146,13 @@ static SDValue makeCSET(SelectionDAG &DAG, SDLoc DL, AArch64CC::CondCode CC,
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, Zero, One, CCValue, Cond);
 }
 
+static SDValue makeCSET(SelectionDAG &DAG, SDLoc DL, SDValue CCValue,
+                        SDValue Cond, EVT VT = MVT::i32) {
+  unsigned CCInt = cast<ConstantSDNode>(CCValue)->getZExtValue();
+  AArch64CC::CondCode CC = static_cast<AArch64CC::CondCode>(CCInt);
+  return makeCSET(DAG, DL, CC, Cond, VT);
+}
+
 // (CSEL 1 0 CC Cond) => CC
 // (CSEL 0 1 CC Cond) => !CC
 // (CSINC 0 0 CC Cond) => !CC
@@ -3562,14 +3569,11 @@ SDValue AArch64TargetLowering::LowerXOR(SDValue Op, SelectionDAG &DAG) const {
     if (!DAG.getTargetLoweringInfo().isTypeLegal(Sel->getValueType(0)))
       return SDValue();
 
-    SDValue TVal = DAG.getConstant(1, dl, MVT::i32);
-    SDValue FVal = DAG.getConstant(0, dl, MVT::i32);
     AArch64CC::CondCode CC;
     SDValue Value, Overflow;
     std::tie(Value, Overflow) = getAArch64XALUOOp(CC, Sel.getValue(0), DAG);
-    SDValue CCVal = DAG.getConstant(getInvertedCondCode(CC), dl, MVT::i32);
-    return DAG.getNode(AArch64ISD::CSEL, dl, Op.getValueType(), TVal, FVal,
-                       CCVal, Overflow);
+    return makeCSET(DAG, dl, AArch64CC::getInvertedCondCode(CC), Overflow,
+                    Op.getValueType());
   }
   // If neither operand is a SELECT_CC, give up.
   if (Sel.getOpcode() != ISD::SELECT_CC)
@@ -3683,30 +3687,19 @@ static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
   return DAG.getNode(ISD::MERGE_VALUES, DL, VTs, Sum, OutFlag);
 }
 
-static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
+static SDValue lowerXALUO(SDValue Op, SelectionDAG &DAG) {
   // Let legalize expand this if it isn't a legal type yet.
   if (!DAG.getTargetLoweringInfo().isTypeLegal(Op.getValueType()))
     return SDValue();
 
-  SDLoc dl(Op);
+  SDLoc DL(Op);
   AArch64CC::CondCode CC;
   // The actual operation that sets the overflow or carry flag.
   SDValue Value, Overflow;
   std::tie(Value, Overflow) = getAArch64XALUOOp(CC, Op, DAG);
-
-  // We use 0 and 1 as false and true values.
-  SDValue TVal = DAG.getConstant(1, dl, MVT::i32);
-  SDValue FVal = DAG.getConstant(0, dl, MVT::i32);
-
-  // We use an inverted condition, because the conditional select is inverted
-  // too. This will allow it to be selected to a single instruction:
-  // CSINC Wd, WZR, WZR, invert(cond).
-  SDValue CCVal = DAG.getConstant(getInvertedCondCode(CC), dl, MVT::i32);
-  Overflow = DAG.getNode(AArch64ISD::CSEL, dl, MVT::i32, FVal, TVal,
-                         CCVal, Overflow);
-
+  Overflow = makeCSET(DAG, DL, CC, Overflow);
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, VTs, Value, Overflow);
+  return DAG.getNode(ISD::MERGE_VALUES, DL, VTs, Value, Overflow);
 }
 
 // Prefetch operands are:
@@ -5593,7 +5586,7 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::USUBO:
   case ISD::SMULO:
   case ISD::UMULO:
-    return LowerXALUO(Op, DAG);
+    return lowerXALUO(Op, DAG);
   case ISD::FADD:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FADD_PRED);
   case ISD::FSUB:
@@ -16916,8 +16909,6 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
 
   // Ensure target specific opcodes are using legal type.
   EVT OutVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
-  SDValue TVal = DAG.getConstant(1, DL, OutVT);
-  SDValue FVal = DAG.getConstant(0, DL, OutVT);
 
   // Ensure operands have type nxv16i1.
   if (Op.getValueType() != MVT::nxv16i1) {
@@ -16933,9 +16924,7 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
   SDValue Test = DAG.getNode(AArch64ISD::PTEST, DL, MVT::Other, Pg, Op);
 
   // Convert CC to integer based on requested condition.
-  // NOTE: Cond is inverted to promote CSEL's removal when it feeds a compare.
-  SDValue CC = DAG.getConstant(getInvertedCondCode(Cond), DL, MVT::i32);
-  SDValue Res = DAG.getNode(AArch64ISD::CSEL, DL, OutVT, FVal, TVal, CC, Test);
+  SDValue Res = makeCSET(DAG, DL, Cond, Test, OutVT);
   return DAG.getZExtOrTrunc(Res, DL, VT);
 }
 
