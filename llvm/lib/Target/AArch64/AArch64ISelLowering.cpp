@@ -3662,7 +3662,7 @@ static SDValue overflowFlagToValue(SDValue Flag, EVT VT, SelectionDAG &DAG) {
 }
 
 // This lowering is inefficient, but it will get cleaned up by
-// `foldOverflowCheck`
+// `performADCSBCCombine`
 static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
                                 bool IsSigned) {
   EVT VT0 = Op.getValue(0).getValueType();
@@ -15451,12 +15451,39 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
   return makeCSET(DAG, DL, CC1, CCmp);
 }
 
+// (AND (CSET ...) (CSET cc2 cond2)) => (CSEL (CSET ...) 0 cc2 cond2)
+// (OR  (CSET ...) (CSET cc2 cond2)) => (CSEL 1 (CSET ...) cc2 cond2)
+static SDValue foldANDORToCSEL(SDNode *Op, SelectionDAG &DAG) {
+  SDValue OpLhs = Op->getOperand(0);
+  SDValue OpRhs = Op->getOperand(1);
+
+  Optional<AArch64CC::CondCode> CC1 = getCSETCondCode(OpLhs);
+  Optional<AArch64CC::CondCode> CC2 = getCSETCondCode(OpRhs);
+  if (!CC1 || !CC2)
+    return SDValue();
+
+  SDLoc DL(Op);
+  EVT VT = Op->getValueType(0);
+  SDValue Zero = DAG.getConstant(0, DL, VT);
+  SDValue One = DAG.getConstant(1, DL, VT);
+  SDValue CC2Val = DAG.getConstant(*CC2, DL, MVT::i32);
+  SDValue Cond2 = OpRhs.getOperand(OpRhs.getNumOperands() - 1);
+
+  if (Op->getOpcode() == ISD::AND)
+    return DAG.getNode(AArch64ISD::CSEL, DL, VT, OpLhs, Zero, CC2Val, Cond2);
+  else
+    return DAG.getNode(AArch64ISD::CSEL, DL, VT, One, OpLhs, CC2Val, Cond2);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
   EVT VT = N->getValueType(0);
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
+    return R;
+
+  if (SDValue R = foldANDORToCSEL(N, DAG))
     return R;
 
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
@@ -15598,6 +15625,9 @@ static SDValue performANDCombine(SDNode *N,
   EVT VT = N->getValueType(0);
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
+    return R;
+
+  if (SDValue R = foldANDORToCSEL(N, DAG))
     return R;
 
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
@@ -16524,48 +16554,6 @@ static SDValue performAddSubLongCombine(SDNode *N,
   }
 
   return DAG.getNode(N->getOpcode(), SDLoc(N), VT, LHS, RHS);
-}
-
-// (ADC{S} l r (CMP (CSET HS carry) 1)) => (ADC{S} l r carry)
-// (SBC{S} l r (CMP 0 (CSET LO carry))) => (SBC{S} l r carry)
-static SDValue foldOverflowCheck(SDNode *Op, SelectionDAG &DAG, bool IsAdd) {
-  SDValue CmpOp = Op->getOperand(2);
-  if (!isCMP(CmpOp))
-    return SDValue();
-
-  if (IsAdd) {
-    if (!isOneConstant(CmpOp.getOperand(1)))
-      return SDValue();
-  } else {
-    if (!isNullConstant(CmpOp.getOperand(0)))
-      return SDValue();
-  }
-
-  SDValue CsetOp = CmpOp->getOperand(IsAdd ? 0 : 1);
-  auto CC = getCSETCondCode(CsetOp);
-  if (CC != (IsAdd ? AArch64CC::HS : AArch64CC::LO))
-    return SDValue();
-
-  return DAG.getNode(Op->getOpcode(), SDLoc(Op), Op->getVTList(),
-                     Op->getOperand(0), Op->getOperand(1),
-                     CsetOp.getOperand(3));
-}
-
-// (ADC x 0 cond) => (CINC x HS cond)
-static SDValue foldADCToCINC(SDNode *N, SelectionDAG &DAG) {
-  SDValue LHS = N->getOperand(0);
-  SDValue RHS = N->getOperand(1);
-  SDValue Cond = N->getOperand(2);
-
-  if (!isNullConstant(RHS))
-    return SDValue();
-
-  EVT VT = N->getValueType(0);
-  SDLoc DL(N);
-
-  // (CINC x cc cond) <=> (CSINC x x !cc cond)
-  SDValue CC = DAG.getConstant(AArch64CC::LO, DL, MVT::i32);
-  return DAG.getNode(AArch64ISD::CSINC, DL, VT, LHS, LHS, CC, Cond);
 }
 
 // Transform vector add(zext i8 to i32, zext i8 to i32)
@@ -18931,13 +18919,20 @@ static SDValue foldCSELOfCSEL(SDNode *Op, SelectionDAG &DAG) {
   if (!isCMP(OpCmp))
     return SDValue();
 
+  LLVM_DEBUG(dbgs() << "OpCmp: "; OpCmp.dump());
+
   SDValue CmpLHS = OpCmp.getOperand(0);
   SDValue CmpRHS = OpCmp.getOperand(1);
 
+  LLVM_DEBUG(dbgs() << "CmpLHS: "; CmpLHS->dump());
+  LLVM_DEBUG(dbgs() << "CmpRHS: "; CmpRHS->dump());
+
   if (CmpRHS.getOpcode() == AArch64ISD::CSEL)
     std::swap(CmpLHS, CmpRHS);
-  else if (CmpLHS.getOpcode() != AArch64ISD::CSEL)
+  else if (CmpLHS.getOpcode() != AArch64ISD::CSEL){
+  LLVM_DEBUG(dbgs() << "Fail: Comparison is not CSEL");
     return SDValue();
+  }
 
   SDValue X = CmpLHS->getOperand(0);
   SDValue Y = CmpLHS->getOperand(1);
@@ -19117,6 +19112,56 @@ static SDValue performFlagSettingCombine(SDNode *N,
   if (SDNode *Generic = DCI.DAG.getNodeIfExists(
           GenericOpcode, DCI.DAG.getVTList(VT), {LHS, RHS}))
     DCI.CombineTo(Generic, SDValue(N, 0));
+
+  return SDValue();
+}
+
+// (ADC{S} l r (CMP (CSET HS carry) 1)) => (ADC{S} l r carry)
+// (SBC{S} l r (CMP 0 (CSET LO carry))) => (SBC{S} l r carry)
+//
+// (ADC x 0 cond) => (CINC x HS cond)
+// (ADC{S} x -1 cond) => (SBC{S} x 0)
+static SDValue performAddSubCarryCombine(SDNode *N, SelectionDAG &DAG,
+                                    TargetLowering::DAGCombinerInfo &DCI) {
+  unsigned Opc = N->getOpcode();
+  bool IsAdd = Opc == AArch64ISD::ADC || Opc == AArch64ISD::ADCS;
+  bool SetsFlags = Opc == AArch64ISD::ADCS || Opc == AArch64ISD::SBCS;
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue Cond = N->getOperand(2);
+
+  EVT VT = N->getValueType(0);
+  SDVTList VTs = N->getVTList();
+  SDLoc DL(N);
+
+  if (isCMP(Cond)) {
+    if ((IsAdd && isOneConstant(Cond.getOperand(1))) ||
+        (!IsAdd && isNullConstant(Cond.getOperand(0)))) {
+      SDValue CsetOp = Cond->getOperand(IsAdd ? 0 : 1);
+      auto CC = getCSETCondCode(CsetOp);
+      if (CC == (IsAdd ? AArch64CC::HS : AArch64CC::LO)) {
+        return DAG.getNode(Opc, DL, VTs, LHS, RHS, CsetOp.getOperand(3));
+      }
+    }
+  }
+
+  if (Opc == AArch64ISD::ADC && isNullConstant(RHS)) {
+    // (CINC x cc cond) <=> (CSINC x x !cc cond)
+    SDValue CC = DAG.getConstant(AArch64CC::LO, DL, MVT::i32);
+    return DAG.getNode(AArch64ISD::CSINC, DL, VTs, LHS, LHS, CC, Cond);
+  }
+
+  if (isAllOnesConstant(RHS)) {
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    return DAG.getNode(SetsFlags ? AArch64ISD::SBCS : AArch64ISD::SBC, DL, VTs,
+                       LHS, Zero, Cond);
+  }
+
+  if (SetsFlags) {
+    return performFlagSettingCombine(N, DCI,
+                                     IsAdd ? AArch64ISD::ADC : AArch64ISD::SBC);
+  }
 
   return SDValue();
 }
@@ -20230,24 +20275,19 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ADD:
   case ISD::SUB:
     return performAddSubCombine(N, DCI, DAG);
+  // case AArch64ISD::ADDS:
+  //   return performFlagSettingCombine(N, DCI, ISD::ADD);
+  // case AArch64ISD::SUBS:
+  //   return performFlagSettingCombine(N, DCI, ISD::SUB);
+  case AArch64ISD::ADC:
+  case AArch64ISD::ADCS:
+  case AArch64ISD::SBC:
+  case AArch64ISD::SBCS:
+    return performAddSubCarryCombine(N, DAG, DCI);
   case ISD::BUILD_VECTOR:
     return performBuildVectorCombine(N, DCI, DAG);
   case AArch64ISD::ANDS:
     return performFlagSettingCombine(N, DCI, ISD::AND);
-  case AArch64ISD::ADC:
-    if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ true))
-      return R;
-    return foldADCToCINC(N, DAG);
-  case AArch64ISD::SBC:
-    return foldOverflowCheck(N, DAG, /* IsAdd */ false);
-  case AArch64ISD::ADCS:
-    if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ true))
-      return R;
-    return performFlagSettingCombine(N, DCI, AArch64ISD::ADC);
-  case AArch64ISD::SBCS:
-    if (auto R = foldOverflowCheck(N, DAG, /* IsAdd */ false))
-      return R;
-    return performFlagSettingCombine(N, DCI, AArch64ISD::SBC);
   case ISD::XOR:
     return performXorCombine(N, DAG, DCI, Subtarget);
   case ISD::MUL:
@@ -21854,7 +21894,6 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorIntDivideToSVE(
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
     SDValue Op1 = convertToScalableVector(DAG, ContainerVT, Op.getOperand(0));
     SDValue Op2 = DAG.getTargetConstant(Log2_64(SplatVal), dl, MVT::i32);
-
     SDValue Pg = getPredicateForFixedLengthVector(DAG, dl, VT);
     SDValue Res = DAG.getNode(AArch64ISD::SRAD_MERGE_OP1, dl, ContainerVT, Pg, Op1, Op2);
     if (Negated)

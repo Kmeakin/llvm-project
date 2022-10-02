@@ -8,7 +8,6 @@ declare { i128, i1 } @llvm.usub.with.overflow.i128(i128, i128)
 declare   i128       @llvm.usub.sat.i128(i128, i128)
 
 declare { i128, i1 } @llvm.umul.with.overflow.i128(i128, i128)
-declare   i128       @llvm.umul.sat.i128(i128, i128)
 
 declare { i128, i1 } @llvm.sadd.with.overflow.i128(i128, i128)
 declare   i128       @llvm.sadd.sat.i128(i128, i128)
@@ -17,7 +16,223 @@ declare { i128, i1 } @llvm.ssub.with.overflow.i128(i128, i128)
 declare   i128       @llvm.ssub.sat.i128(i128, i128)
 
 declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128)
-declare   i128       @llvm.smul.sat.i128(i128, i128)
+
+declare i128 @llvm.ctpop.i128(i128)
+
+define i1 @u128_eq(i128 %x, i128 %y) {
+; CHECK-LABEL: u128_eq:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor x8, x1, x3
+; CHECK-NEXT:    eor x9, x0, x2
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %1 = icmp eq i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @u128_ne(i128 %x, i128 %y) {
+; CHECK-LABEL: u128_ne:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor x8, x1, x3
+; CHECK-NEXT:    eor x9, x0, x2
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #0
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %1 = icmp ne i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @u128_lt(i128 %x, i128 %y) {
+; CHECK-LABEL: u128_lt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    cset w9, lo
+; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    ret
+  %1 = icmp ult i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @u128_le(i128 %x, i128 %y) {
+; CHECK-LABEL: u128_le:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, ls
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    cset w9, ls
+; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    ret
+  %1 = icmp ule i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @u128_gt(i128 %x, i128 %y) {
+; CHECK-LABEL: u128_gt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    cset w9, hi
+; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    ret
+  %1 = icmp ugt i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @u128_ge(i128 %x, i128 %y) {
+; CHECK-LABEL: u128_ge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, hs
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    cset w9, hs
+; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    ret
+  %1 = icmp uge i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @i128_lt(i128 %x, i128 %y) {
+; CHECK-LABEL: i128_lt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    cset w9, lt
+; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    ret
+  %1 = icmp slt i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @i128_le(i128 %x, i128 %y) {
+; CHECK-LABEL: i128_le:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, ls
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    cset w9, le
+; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    ret
+  %1 = icmp sle i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @i128_gt(i128 %x, i128 %y) {
+; CHECK-LABEL: i128_gt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    cset w9, gt
+; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    ret
+  %1 = icmp sgt i128 %x, %y
+  ret i1 %1
+}
+
+define i1 @i128_ge(i128 %x, i128 %y) {
+; CHECK-LABEL: i128_ge:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w8, hs
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    cset w9, ge
+; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    ret
+  %1 = icmp sge i128 %x, %y
+  ret i1 %1
+}
+
+define void @cmp_cse(i128 %x, i128 %y, ptr %ptr_eq, ptr %ptr_ne, ptr %ptr_ult, ptr %ptr_ule, ptr %ptr_ugt, ptr %ptr_uge, ptr %ptr_slt, ptr %ptr_sle, ptr %ptr_sgt, ptr %ptr_sge) {
+; CHECK-LABEL: cmp_cse:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    eor x9, x1, x3
+; CHECK-NEXT:    eor x10, x0, x2
+; CHECK-NEXT:    orr x9, x10, x9
+; CHECK-NEXT:    ldr x14, [sp]
+; CHECK-NEXT:    cmp x9, #0
+; CHECK-NEXT:    cset w9, eq
+; CHECK-NEXT:    cset w12, ne
+; CHECK-NEXT:    cmp x0, x2
+; CHECK-NEXT:    cset w15, lo
+; CHECK-NEXT:    cset w16, ls
+; CHECK-NEXT:    cset w17, hi
+; CHECK-NEXT:    cset w18, hs
+; CHECK-NEXT:    cmp x1, x3
+; CHECK-NEXT:    strb w9, [x4]
+; CHECK-NEXT:    ldp x13, x11, [sp, #8]
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    cset w1, ls
+; CHECK-NEXT:    cset w2, hi
+; CHECK-NEXT:    cset w3, hs
+; CHECK-NEXT:    csel w0, w15, w0, eq
+; CHECK-NEXT:    csel w1, w16, w1, eq
+; CHECK-NEXT:    csel w2, w17, w2, eq
+; CHECK-NEXT:    csel w18, w18, w3, eq
+; CHECK-NEXT:    ldp x10, x8, [sp, #24]
+; CHECK-NEXT:    cset w3, lt
+; CHECK-NEXT:    strb w12, [x5]
+; CHECK-NEXT:    csel w9, w15, w3, eq
+; CHECK-NEXT:    cset w12, le
+; CHECK-NEXT:    cset w15, gt
+; CHECK-NEXT:    strb w0, [x6]
+; CHECK-NEXT:    csel w12, w16, w12, eq
+; CHECK-NEXT:    strb w1, [x7]
+; CHECK-NEXT:    strb w2, [x14]
+; CHECK-NEXT:    csel w14, w17, w15, eq
+; CHECK-NEXT:    strb w18, [x13]
+; CHECK-NEXT:    ldr x13, [sp, #40]
+; CHECK-NEXT:    strb w12, [x11]
+; CHECK-NEXT:    strb w9, [x10]
+; CHECK-NEXT:    strb w14, [x8]
+; CHECK-NEXT:    strb w9, [x13]
+; CHECK-NEXT:    ret
+  %eq = icmp eq i128 %x, %y
+  %ne = icmp ne i128 %x, %y
+  %ult = icmp ult i128 %x, %y
+  %ule = icmp ule i128 %x, %y
+  %ugt = icmp ugt i128 %x, %y
+  %uge = icmp uge i128 %x, %y
+  %sle = icmp slt i128 %x, %y
+  %slt = icmp sle i128 %x, %y
+  %sgt = icmp sgt i128 %x, %y
+  %sge = icmp sge i128 %x, %y
+  store i1 %eq, ptr %ptr_eq, align 1
+  store i1 %ne, ptr %ptr_ne, align 1
+  store i1 %ult, ptr %ptr_ult, align 1
+  store i1 %ule, ptr %ptr_ule, align 1
+  store i1 %ugt, ptr %ptr_ugt, align 1
+  store i1 %uge, ptr %ptr_uge, align 1
+  store i1 %slt, ptr %ptr_slt, align 1
+  store i1 %sle, ptr %ptr_sle, align 1
+  store i1 %sgt, ptr %ptr_sgt, align 1
+  store i1 %sle, ptr %ptr_sge, align 1
+  ret void
+}
+
+define i1 @u128_is_pow2(i128 %x) {
+; CHECK-LABEL: u128_is_pow2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs x8, x0, #1
+; CHECK-NEXT:    orr x10, x0, x1
+; CHECK-NEXT:    sbc x9, x1, xzr
+; CHECK-NEXT:    and x8, x0, x8
+; CHECK-NEXT:    and x9, x1, x9
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    orr x8, x8, x9
+; CHECK-NEXT:    ccmp x8, #0, #0, ne
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
+  %1 = tail call i128 @llvm.ctpop.i128(i128 %x)
+  %2 = icmp eq i128 %1, 1
+  ret i1 %2
+}
 
 define i128 @u128_add(i128 %x, i128 %y) {
 ; CHECK-LABEL: u128_add:
@@ -81,6 +296,16 @@ define i128 @u128_sub(i128 %x, i128 %y) {
 ; CHECK-NEXT:    sbc x1, x1, x3
 ; CHECK-NEXT:    ret
   %1 = sub i128 %x, %y
+  ret i128 %1
+}
+
+define i128 @u128_sub_const(i128 %x) {
+; CHECK-LABEL: u128_sub_const:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    subs x0, x0, #1
+; CHECK-NEXT:    sbc x1, x1, xzr
+; CHECK-NEXT:    ret
+  %1 = sub i128 %x, 1
   ret i128 %1
 }
 
