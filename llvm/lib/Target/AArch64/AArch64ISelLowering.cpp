@@ -3628,7 +3628,7 @@ SDValue AArch64TargetLowering::LowerXOR(SDValue Op, SelectionDAG &DAG) const {
 // If Invert is false, sets 'C' bit of NZCV to 0 if value is 0, else sets 'C'
 // bit to 1. If Invert is true, sets 'C' bit of NZCV to 1 if value is 0, else
 // sets 'C' bit to 0.
-static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG, bool Invert) {
+static SDValue valueToCarryFlag(SelectionDAG &DAG, SDValue Value, bool Invert) {
   SDLoc DL(Value);
   EVT VT = Value.getValueType();
   SDValue Op0 = Invert ? DAG.getConstant(0, DL, VT) : Value;
@@ -3640,25 +3640,19 @@ static SDValue valueToCarryFlag(SDValue Value, SelectionDAG &DAG, bool Invert) {
 
 // If Invert is false, value is 1 if 'C' bit of NZCV is 1, else 0.
 // If Invert is true, value is 0 if 'C' bit of NZCV is 1, else 1.
-static SDValue carryFlagToValue(SDValue Flag, EVT VT, SelectionDAG &DAG,
+static SDValue carryFlagToValue(SelectionDAG &DAG, SDValue Cond, EVT VT,
                                 bool Invert) {
-  assert(Flag.getResNo() == 1);
-  SDLoc DL(Flag);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue One = DAG.getConstant(1, DL, VT);
-  unsigned Cond = Invert ? AArch64CC::LO : AArch64CC::HS;
-  SDValue CC = DAG.getConstant(Cond, DL, MVT::i32);
-  return DAG.getNode(AArch64ISD::CSEL, DL, VT, One, Zero, CC, Flag);
+  assert(Cond.getResNo() == 1);
+  SDLoc DL(Cond);
+  AArch64CC::CondCode CC = Invert ? AArch64CC::LO : AArch64CC::HS;
+  return makeCSET(DAG, DL, CC, Cond, VT);
 }
 
 // Value is 1 if 'V' bit of NZCV is 1, else 0
-static SDValue overflowFlagToValue(SDValue Flag, EVT VT, SelectionDAG &DAG) {
-  assert(Flag.getResNo() == 1);
-  SDLoc DL(Flag);
-  SDValue Zero = DAG.getConstant(0, DL, VT);
-  SDValue One = DAG.getConstant(1, DL, VT);
-  SDValue CC = DAG.getConstant(AArch64CC::VS, DL, MVT::i32);
-  return DAG.getNode(AArch64ISD::CSEL, DL, VT, One, Zero, CC, Flag);
+static SDValue overflowFlagToValue(SelectionDAG &DAG, SDValue Cond, EVT VT) {
+  assert(Cond.getResNo() == 1);
+  SDLoc DL(Cond);
+  return makeCSET(DAG, DL, AArch64CC::VS, Cond, VT);
 }
 
 // This lowering is inefficient, but it will get cleaned up by
@@ -3674,7 +3668,7 @@ static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
   bool InvertCarry = Opcode == AArch64ISD::SBCS;
   SDValue OpLHS = Op.getOperand(0);
   SDValue OpRHS = Op.getOperand(1);
-  SDValue OpCarryIn = valueToCarryFlag(Op.getOperand(2), DAG, InvertCarry);
+  SDValue OpCarryIn = valueToCarryFlag(DAG, Op.getOperand(2), InvertCarry);
 
   SDLoc DL(Op);
   SDVTList VTs = DAG.getVTList(VT0, VT1);
@@ -3683,8 +3677,8 @@ static SDValue lowerADDSUBCARRY(SDValue Op, SelectionDAG &DAG, unsigned Opcode,
                             OpRHS, OpCarryIn);
 
   SDValue OutFlag =
-      IsSigned ? overflowFlagToValue(Sum.getValue(1), VT1, DAG)
-               : carryFlagToValue(Sum.getValue(1), VT1, DAG, InvertCarry);
+      IsSigned ? overflowFlagToValue(DAG, Sum.getValue(1), VT1)
+               : carryFlagToValue(DAG, Sum.getValue(1), VT1, InvertCarry);
 
   return DAG.getNode(ISD::MERGE_VALUES, DL, VTs, Sum, OutFlag);
 }

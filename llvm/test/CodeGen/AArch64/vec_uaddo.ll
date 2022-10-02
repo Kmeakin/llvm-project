@@ -276,18 +276,18 @@ define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, <4 x i1>* %p2) nounwind
 define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, <2 x i128>* %p2) nounwind {
 ; CHECK-LABEL: uaddo_v2i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adds x8, x2, x6
-; CHECK-NEXT:    adcs x9, x3, x7
+; CHECK-NEXT:    adds x8, x0, x4
+; CHECK-NEXT:    adcs x9, x1, x5
 ; CHECK-NEXT:    cset w10, hs
-; CHECK-NEXT:    adds x11, x0, x4
-; CHECK-NEXT:    adcs x12, x1, x5
+; CHECK-NEXT:    adds x11, x2, x6
+; CHECK-NEXT:    adcs x12, x3, x7
 ; CHECK-NEXT:    cset w13, hs
-; CHECK-NEXT:    fmov s0, w13
-; CHECK-NEXT:    mov v0.s[1], w10
+; CHECK-NEXT:    fmov s0, w10
 ; CHECK-NEXT:    ldr x10, [sp]
-; CHECK-NEXT:    stp x8, x9, [x10, #16]
+; CHECK-NEXT:    mov v0.s[1], w13
+; CHECK-NEXT:    stp x11, x12, [x10, #16]
+; CHECK-NEXT:    stp x8, x9, [x10]
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
-; CHECK-NEXT:    stp x11, x12, [x10]
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret
   %t = call {<2 x i128>, <2 x i1>} @llvm.uadd.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)
