@@ -8340,37 +8340,28 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(OpNo + 0);
   SDValue RHS = Op.getOperand(OpNo + 1);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(OpNo + 2))->get();
-  SDLoc dl(Op);
-
-  // We chose ZeroOrOneBooleanContents, so use zero and one.
+  SDLoc DL(Op);
   EVT VT = Op.getValueType();
-  SDValue TVal = DAG.getConstant(1, dl, VT);
-  SDValue FVal = DAG.getConstant(0, dl, VT);
 
   // Handle f128 first, since one possible outcome is a normal integer
   // comparison which gets picked up by the next if statement.
   if (LHS.getValueType() == MVT::f128) {
-    softenSetCCOperands(DAG, MVT::f128, LHS, RHS, CC, dl, LHS, RHS, Chain,
+    softenSetCCOperands(DAG, MVT::f128, LHS, RHS, CC, DL, LHS, RHS, Chain,
                         IsSignaling);
 
     // If softenSetCCOperands returned a scalar, use it.
     if (!RHS.getNode()) {
       assert(LHS.getValueType() == Op.getValueType() &&
              "Unexpected setcc expansion!");
-      return IsStrict ? DAG.getMergeValues({LHS, Chain}, dl) : LHS;
+      return IsStrict ? DAG.getMergeValues({LHS, Chain}, DL) : LHS;
     }
   }
 
   if (LHS.getValueType().isInteger()) {
     SDValue CCVal;
-    SDValue Cmp = getAArch64Cmp(
-        LHS, RHS, ISD::getSetCCInverse(CC, LHS.getValueType()), CCVal, DAG, dl);
-
-    // Note that we inverted the condition above, so we reverse the order of
-    // the true and false operands here.  This will allow the setcc to be
-    // matched to a single CSINC instruction.
-    SDValue Res = DAG.getNode(AArch64ISD::CSEL, dl, VT, FVal, TVal, CCVal, Cmp);
-    return IsStrict ? DAG.getMergeValues({Res, Chain}, dl) : Res;
+    SDValue Cmp = getAArch64Cmp(LHS, RHS, CC, CCVal, DAG, DL);
+    SDValue Res = makeCSET(DAG, DL, CCVal, Cmp, VT);
+    return IsStrict ? DAG.getMergeValues({Res, Chain}, DL) : Res;
   }
 
   // Now we know we're dealing with FP values.
@@ -8381,37 +8372,24 @@ SDValue AArch64TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   // and do the comparison.
   SDValue Cmp;
   if (IsStrict)
-    Cmp = emitStrictFPComparison(LHS, RHS, dl, DAG, Chain, IsSignaling);
+    Cmp = emitStrictFPComparison(LHS, RHS, DL, DAG, Chain, IsSignaling);
   else
-    Cmp = emitComparison(LHS, RHS, CC, dl, DAG);
+    Cmp = emitComparison(LHS, RHS, CC, DL, DAG);
 
   AArch64CC::CondCode CC1, CC2;
   changeFPCCToAArch64CC(CC, CC1, CC2);
   SDValue Res;
   if (CC2 == AArch64CC::AL) {
-    changeFPCCToAArch64CC(ISD::getSetCCInverse(CC, LHS.getValueType()), CC1,
-                          CC2);
-    SDValue CC1Val = DAG.getConstant(CC1, dl, MVT::i32);
-
-    // Note that we inverted the condition above, so we reverse the order of
-    // the true and false operands here.  This will allow the setcc to be
-    // matched to a single CSINC instruction.
-    Res = DAG.getNode(AArch64ISD::CSEL, dl, VT, FVal, TVal, CC1Val, Cmp);
+    changeFPCCToAArch64CC(CC, CC1, CC2);
+    Res = makeCSET(DAG, DL, CC1, Cmp, VT);
   } else {
     // Unfortunately, the mapping of LLVM FP CC's onto AArch64 CC's isn't
-    // totally clean.  Some of them require two CSELs to implement.  As is in
-    // this case, we emit the first CSEL and then emit a second using the output
-    // of the first as the RHS.  We're effectively OR'ing the two CC's together.
-
-    // FIXME: It would be nice if we could match the two CSELs to two CSINCs.
-    SDValue CC1Val = DAG.getConstant(CC1, dl, MVT::i32);
-    SDValue CS1 =
-        DAG.getNode(AArch64ISD::CSEL, dl, VT, TVal, FVal, CC1Val, Cmp);
-
-    SDValue CC2Val = DAG.getConstant(CC2, dl, MVT::i32);
-    Res = DAG.getNode(AArch64ISD::CSEL, dl, VT, TVal, CS1, CC2Val, Cmp);
+    // totally clean.  Some of them require two CSELs to implement.
+    SDValue CS1 = makeCSET(DAG, DL, CC1, Cmp, VT);
+    SDValue CS2 = makeCSET(DAG, DL, CC2, Cmp, VT);
+    Res = DAG.getNode(ISD::OR, DL, VT, {CS1, CS2});
   }
-  return IsStrict ? DAG.getMergeValues({Res, Cmp.getValue(1)}, dl) : Res;
+  return IsStrict ? DAG.getMergeValues({Res, Cmp.getValue(1)}, DL) : Res;
 }
 
 SDValue AArch64TargetLowering::LowerSELECT_CC(ISD::CondCode CC, SDValue LHS,
