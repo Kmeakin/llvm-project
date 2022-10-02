@@ -19002,22 +19002,14 @@ static SDValue performSETCCCombine(SDNode *N,
   if (SDValue V = tryToWidenSetCCOperands(N, DAG))
     return V;
 
-  // setcc (csel 0, 1, cond, X), 1, ne ==> csel 0, 1, !cond, X
-  if (Cond == ISD::SETNE && isOneConstant(RHS) &&
-      LHS->getOpcode() == AArch64ISD::CSEL &&
-      isNullConstant(LHS->getOperand(0)) && isOneConstant(LHS->getOperand(1)) &&
-      LHS->hasOneUse()) {
-    // Invert CSEL's condition.
-    auto *OpCC = cast<ConstantSDNode>(LHS.getOperand(2));
-    auto OldCond = static_cast<AArch64CC::CondCode>(OpCC->getZExtValue());
-    auto NewCond = getInvertedCondCode(OldCond);
-
-    // csel 0, 1, !cond, X
-    SDValue CSEL =
-        DAG.getNode(AArch64ISD::CSEL, DL, LHS.getValueType(), LHS.getOperand(0),
-                    LHS.getOperand(1), DAG.getConstant(NewCond, DL, MVT::i32),
-                    LHS.getOperand(3));
-    return DAG.getZExtOrTrunc(CSEL, DL, VT);
+  // setcc (cset cc, X), 1, ne ==> cset !cc, X
+  if (LHS->hasOneUse() && Cond == ISD::SETNE && isOneConstant(RHS)) {
+    if (auto CC = getCSETCondCode(LHS)) {
+      auto NotCC = AArch64CC::getInvertedCondCode(*CC);
+      SDValue CSET =
+          makeCSET(DAG, DL, NotCC, LHS.getOperand(3), LHS.getValueType());
+      return DAG.getZExtOrTrunc(CSET, DL, VT);
+    }
   }
 
   // setcc (srl x, imm), 0, ne ==> setcc (and x, (-1 << imm)), 0, ne
