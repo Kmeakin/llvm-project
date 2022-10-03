@@ -18922,6 +18922,66 @@ static SDValue foldCSELOfCSEL(SDNode *Op, SelectionDAG &DAG) {
   return DAG.getNode(AArch64ISD::CSEL, DL, VT, L, R, CCValue, Cond);
 }
 
+// (CSEL l r EQ (CMP (OR (XOR x1 y1) (XOR x2 y2)) 0))
+// =>
+// (CSEL l r EQ (CCMP x2 y2 NE EQ (CMP x1 y2)))
+
+// (CSEL l r NE (CMP (OR (XOR x1 y1) (XOR x2 y2)) 0))
+// =>
+// (CSEL l r NE (CCMP x2 y2 NE EQ (CMP x1 y2)))
+
+// TODO: fold more than two XORs 
+// eg: (OR (XOR x1 y1) (OR (XOR x2 y2) (XOR x3 y3))
+static SDValue foldCSELOfORXOR(SDNode *Op, SelectionDAG &DAG) {
+  SDValue L = Op->getOperand(0);
+  SDValue R = Op->getOperand(1);
+  AArch64CC::CondCode CC =
+      static_cast<AArch64CC::CondCode>(Op->getConstantOperandVal(2));
+  SDValue Cond = Op->getOperand(3);
+
+  if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
+    return SDValue();
+
+  if (!isCMP(Cond))
+    return SDValue();
+
+  SDValue CmpLHS = Cond.getOperand(0);
+  SDValue CmpRHS = Cond.getOperand(1);
+
+  if (isNullConstant(CmpLHS)) {
+    std::swap(CmpLHS, CmpRHS);
+  } else if (!isNullConstant(CmpRHS)) {
+    return SDValue();
+  }
+
+  if (CmpLHS->getOpcode() != ISD::OR)
+    return SDValue();
+
+  SDValue OrLHS = CmpLHS.getOperand(0);
+  SDValue OrRHS = CmpLHS.getOperand(1);
+
+  if (OrLHS.getOpcode() != ISD::XOR || OrRHS.getOpcode() != ISD::XOR)
+    return SDValue();
+
+  SDValue X1 = OrLHS.getOperand(0);
+  SDValue Y1 = OrLHS.getOperand(1);
+  SDValue X2 = OrRHS.getOperand(0);
+  SDValue Y2 = OrRHS.getOperand(1);
+
+  SDLoc DL(Op);
+  SDVTList VTs = Cond->getVTList();
+
+  SDValue CMP = DAG.getNode(AArch64ISD::SUBS, DL, VTs, {X1, Y1});
+  SDValue EQ = DAG.getConstant(AArch64CC::EQ, DL, MVT_CC);
+  SDValue NE = DAG.getConstant(
+      AArch64CC::getNZCVToSatisfyCondCode(AArch64CC::NE), DL, MVT_CC);
+  SDValue CCMP = DAG.getNode(AArch64ISD::CCMP, DL, MVT_CC,
+                             {X2, Y2, NE, EQ, CMP.getValue(1)});
+
+  return DAG.getNode(AArch64ISD::CSEL, DL, Op->getValueType(0),
+                     {L, R, Op->getOperand(2), CCMP});
+}
+
 // Optimize CSEL instructions
 static SDValue performCSELCombine(SDNode *N,
                                   TargetLowering::DAGCombinerInfo &DCI,
@@ -18931,6 +18991,9 @@ static SDValue performCSELCombine(SDNode *N,
     return N->getOperand(0);
 
   if (SDValue R = foldCSELOfCSEL(N, DAG))
+    return R;
+
+  if (SDValue R = foldCSELOfORXOR(N, DAG))
     return R;
 
   // CSEL 0, cttz(X), eq(X, 0) -> AND cttz bitwidth-1

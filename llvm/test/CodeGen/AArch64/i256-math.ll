@@ -59,19 +59,17 @@ define i1 @u256_lt(i256 %x, i256 %y) {
 ; CHECK-LABEL: u256_lt:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cset w8, lo
 ; CHECK-NEXT:    cmp x3, x7
 ; CHECK-NEXT:    cset w9, lo
-; CHECK-NEXT:    eor x11, x2, x6
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    cset w9, lo
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    cset w12, lo
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    csel w9, w9, w12, eq
-; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %1 = icmp ult i256 %x, %y
@@ -82,19 +80,17 @@ define i1 @u256_le(i256 %x, i256 %y) {
 ; CHECK-LABEL: u256_le:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cset w8, ls
 ; CHECK-NEXT:    cmp x3, x7
 ; CHECK-NEXT:    cset w9, ls
-; CHECK-NEXT:    eor x11, x2, x6
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    cset w9, ls
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    cset w12, ls
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    csel w9, w9, w12, eq
-; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cset w10, ls
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %1 = icmp ule i256 %x, %y
@@ -105,19 +101,17 @@ define i1 @u256_gt(i256 %x, i256 %y) {
 ; CHECK-LABEL: u256_gt:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cset w8, hi
 ; CHECK-NEXT:    cmp x3, x7
 ; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    eor x11, x2, x6
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    cset w9, hi
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    cset w12, hi
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    csel w9, w9, w12, eq
-; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cset w10, hi
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %1 = icmp ugt i256 %x, %y
@@ -128,19 +122,17 @@ define i1 @u256_ge(i256 %x, i256 %y) {
 ; CHECK-LABEL: u256_ge:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cset w8, hs
 ; CHECK-NEXT:    cmp x3, x7
 ; CHECK-NEXT:    cset w9, hs
-; CHECK-NEXT:    eor x11, x2, x6
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    cset w9, hs
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    cset w12, hs
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    csel w9, w9, w12, eq
-; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cset w10, hs
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %1 = icmp uge i256 %x, %y
@@ -151,19 +143,17 @@ define i1 @i256_lt(i256 %x, i256 %y) {
 ; CHECK-LABEL: i256_lt:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cset w8, lo
 ; CHECK-NEXT:    cmp x3, x7
 ; CHECK-NEXT:    cset w9, lt
-; CHECK-NEXT:    eor x11, x2, x6
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    cset w9, lo
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    cset w12, lo
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    csel w9, w9, w12, eq
-; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %1 = icmp slt i256 %x, %y
@@ -174,19 +164,17 @@ define i1 @i256_le(i256 %x, i256 %y) {
 ; CHECK-LABEL: i256_le:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cset w8, ls
 ; CHECK-NEXT:    cmp x3, x7
 ; CHECK-NEXT:    cset w9, le
-; CHECK-NEXT:    eor x11, x2, x6
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    cset w9, ls
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    cset w12, ls
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    csel w9, w9, w12, eq
-; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cset w10, ls
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %1 = icmp sle i256 %x, %y
@@ -197,19 +185,17 @@ define i1 @i256_gt(i256 %x, i256 %y) {
 ; CHECK-LABEL: i256_gt:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cset w8, hi
 ; CHECK-NEXT:    cmp x3, x7
 ; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    eor x11, x2, x6
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    cset w9, hi
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    cset w12, hi
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    csel w9, w9, w12, eq
-; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cset w10, hi
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %1 = icmp sgt i256 %x, %y
@@ -220,127 +206,54 @@ define i1 @i256_ge(i256 %x, i256 %y) {
 ; CHECK-LABEL: i256_ge:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    eor x10, x3, x7
 ; CHECK-NEXT:    cset w8, hs
 ; CHECK-NEXT:    cmp x3, x7
 ; CHECK-NEXT:    cset w9, ge
-; CHECK-NEXT:    eor x11, x2, x6
 ; CHECK-NEXT:    csel w8, w8, w9, eq
 ; CHECK-NEXT:    cmp x0, x4
 ; CHECK-NEXT:    cset w9, hs
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    cset w12, hs
-; CHECK-NEXT:    orr x10, x11, x10
-; CHECK-NEXT:    csel w9, w9, w12, eq
-; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    cset w10, hs
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
 ; CHECK-NEXT:    csel w0, w9, w8, eq
 ; CHECK-NEXT:    ret
   %1 = icmp sge i256 %x, %y
   ret i1 %1
 }
 
-define void @cmp_cse(i256 %x, i256 %y, ptr %ptr_eq, ptr %ptr_ne, ptr %ptr_ult, ptr %ptr_ule, ptr %ptr_ugt, ptr %ptr_uge, ptr %ptr_slt, ptr %ptr_sle, ptr %ptr_sgt, ptr %ptr_sge) {
+define void @cmp_cse(i256 %x, i256 %y, ptr %ptr_ult, ptr %ptr_ule) {
 ; CHECK-LABEL: cmp_cse:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x22, x21, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    eor x8, x3, x7
-; CHECK-NEXT:    eor x9, x1, x5
-; CHECK-NEXT:    eor x10, x2, x6
-; CHECK-NEXT:    eor x11, x0, x4
-; CHECK-NEXT:    orr x9, x9, x8
-; CHECK-NEXT:    orr x11, x11, x10
-; CHECK-NEXT:    orr x9, x11, x9
-; CHECK-NEXT:    orr x8, x10, x8
-; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    cset w13, eq
-; CHECK-NEXT:    cset w14, ne
 ; CHECK-NEXT:    cmp x0, x4
-; CHECK-NEXT:    cset w15, lo
-; CHECK-NEXT:    cset w16, ls
-; CHECK-NEXT:    cset w17, hi
-; CHECK-NEXT:    cset w18, hs
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cset w9, ls
 ; CHECK-NEXT:    cmp x1, x5
-; CHECK-NEXT:    ldr x1, [sp, #64]
-; CHECK-NEXT:    cset w4, lo
-; CHECK-NEXT:    csel w15, w15, w4, eq
-; CHECK-NEXT:    cset w4, ls
-; CHECK-NEXT:    csel w16, w16, w4, eq
-; CHECK-NEXT:    cset w4, hi
-; CHECK-NEXT:    csel w17, w17, w4, eq
-; CHECK-NEXT:    cset w4, hs
-; CHECK-NEXT:    csel w18, w18, w4, eq
-; CHECK-NEXT:    cmp x2, x6
-; CHECK-NEXT:    cset w2, lo
-; CHECK-NEXT:    cset w4, ls
-; CHECK-NEXT:    cset w5, hi
-; CHECK-NEXT:    cset w6, hs
-; CHECK-NEXT:    cmp x3, x7
-; CHECK-NEXT:    ldp x7, x3, [sp, #32]
-; CHECK-NEXT:    cset w19, lo
-; CHECK-NEXT:    cset w21, hs
-; CHECK-NEXT:    cset w22, lt
-; CHECK-NEXT:    csel w19, w2, w19, eq
+; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    csel w8, w8, w10, eq
 ; CHECK-NEXT:    cset w10, ls
-; CHECK-NEXT:    cset w20, hi
-; CHECK-NEXT:    csel w6, w6, w21, eq
-; CHECK-NEXT:    csel w2, w2, w22, eq
-; CHECK-NEXT:    cset w21, le
-; CHECK-NEXT:    cset w22, gt
-; CHECK-NEXT:    csel w10, w4, w10, eq
-; CHECK-NEXT:    csel w20, w5, w20, eq
-; CHECK-NEXT:    csel w4, w4, w21, eq
-; CHECK-NEXT:    csel w5, w5, w22, eq
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    strb w13, [x7]
-; CHECK-NEXT:    ldp x21, x8, [sp, #48]
-; CHECK-NEXT:    csel w19, w15, w19, eq
-; CHECK-NEXT:    csel w10, w16, w10, eq
-; CHECK-NEXT:    csel w13, w17, w20, eq
-; CHECK-NEXT:    strb w14, [x3]
-; CHECK-NEXT:    ldp x9, x12, [sp, #88]
-; CHECK-NEXT:    strb w19, [x21]
-; CHECK-NEXT:    csel w14, w18, w6, eq
-; CHECK-NEXT:    ldp x0, x11, [sp, #72]
-; CHECK-NEXT:    csel w16, w16, w4, eq
-; CHECK-NEXT:    strb w10, [x8]
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    csel w8, w15, w2, eq
-; CHECK-NEXT:    strb w13, [x1]
-; CHECK-NEXT:    csel w10, w17, w5, eq
-; CHECK-NEXT:    ldr x13, [sp, #104]
-; CHECK-NEXT:    strb w14, [x0]
-; CHECK-NEXT:    strb w16, [x11]
-; CHECK-NEXT:    strb w8, [x9]
-; CHECK-NEXT:    strb w10, [x12]
-; CHECK-NEXT:    strb w8, [x13]
-; CHECK-NEXT:    ldp x22, x21, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    csel w9, w9, w10, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    cset w11, ls
+; CHECK-NEXT:    cmp x3, x7
+; CHECK-NEXT:    cset w12, lo
+; CHECK-NEXT:    csel w10, w10, w12, eq
+; CHECK-NEXT:    cset w12, ls
+; CHECK-NEXT:    csel w11, w11, w12, eq
+; CHECK-NEXT:    cmp x2, x6
+; CHECK-NEXT:    ccmp x3, x7, #0, eq
+; CHECK-NEXT:    csel w8, w8, w10, eq
+; CHECK-NEXT:    csel w9, w9, w11, eq
+; CHECK-NEXT:    ldp x12, x10, [sp]
+; CHECK-NEXT:    strb w8, [x12]
+; CHECK-NEXT:    strb w9, [x10]
 ; CHECK-NEXT:    ret
-  %eq = icmp eq i256 %x, %y
-  %ne = icmp ne i256 %x, %y
   %ult = icmp ult i256 %x, %y
   %ule = icmp ule i256 %x, %y
-  %ugt = icmp ugt i256 %x, %y
-  %uge = icmp uge i256 %x, %y
-  %sle = icmp slt i256 %x, %y
-  %slt = icmp sle i256 %x, %y
-  %sgt = icmp sgt i256 %x, %y
-  %sge = icmp sge i256 %x, %y
-  store i1 %eq, ptr %ptr_eq, align 1
-  store i1 %ne, ptr %ptr_ne, align 1
   store i1 %ult, ptr %ptr_ult, align 1
   store i1 %ule, ptr %ptr_ule, align 1
-  store i1 %ugt, ptr %ptr_ugt, align 1
-  store i1 %uge, ptr %ptr_uge, align 1
-  store i1 %slt, ptr %ptr_slt, align 1
-  store i1 %sle, ptr %ptr_sle, align 1
-  store i1 %sgt, ptr %ptr_sgt, align 1
-  store i1 %sle, ptr %ptr_sge, align 1
   ret void
 }
 
