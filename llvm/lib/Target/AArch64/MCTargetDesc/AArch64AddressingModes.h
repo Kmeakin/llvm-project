@@ -206,68 +206,106 @@ static inline uint64_t ror(uint64_t elt, unsigned size) {
   return ((elt & 1) << (size-1)) | (elt >> 1);
 }
 
+static inline bool processLogicalImmediate64(uint64_t Imm, uint64_t &Encoding) {
+  // Consider an ARM64 logical immediate as a pattern of "o" ones preceded
+  // by "z" more-significant zeroes, repeated to fill a 64-bit integer.
+  // o > 0, z > 0, and the size (o + z) is a power of two in [2,64]. This
+  // part of the pattern is encoded in the fields "imms" and "N".
+  //
+  // "immr" encodes a further right rotate of the repeated pattern, allowing
+  // a wide range of useful bitwise constants to be represented.
+  //
+  // (The spec describes the "immr" rotate as rotating the "o + z" bit
+  // pattern before repeating it to fill 64-bits, but, as it's a repeating
+  // pattern, rotating afterwards is equivalent.)
+
+  // This encoding is not allowed to represent all-zero or all-one values.
+  if (Imm == 0 || ~Imm == 0)
+    return false;
+
+  // To detect an immediate that may be encoded in this scheme, we first
+  // remove the right-rotate, by rotating such that the least significant
+  // bit is a one and the most significant bit is a zero.
+  //
+  // We do this by clearing any trailing one bits, then counting the
+  // trailing zeroes. This finds an "edge", where zero goes to one.
+  // We then rotate the original value right by that amount, moving
+  // the first one to the least significant bit.
+
+  auto Rotation = llvm::countr_zero(Imm & (Imm + 1));
+  auto Normalized = llvm::rotr(Imm, Rotation & 63);
+
+  // Now we have normalized the value, and determined the rotation, we can
+  // determine "z" by counting the leading zeroes, and "o" by counting the
+  // trailing ones. (These will both be positive, as we already rejected 0
+  // and ~0, and rotated the value to start with a zero and end with a one.)
+
+  auto Zeroes = llvm::countl_zero(Normalized);
+  auto Ones = llvm::countr_zero(~Normalized);
+  auto Size = Zeroes + Ones;
+
+  // Detect the repeating pattern (by comparing every repetition to the
+  // one next to it, using rotate).
+
+  if (llvm::rotr(Imm, Size & 63) != Imm)
+    return false;
+
+  // We do not need to further validate size to ensure it is a power of two
+  // between 2 and 64. The only "minimal" patterns that can repeat to fill a
+  // 64-bit value must have a length that is a factor of 64 (i.e. it is a
+  // power of two in the range [1,64]). And our pattern cannot be of length
+  // one (as we already rejected 0 and ~0).
+  //
+  // By "minimal" patterns I refer to patterns which do not themselves
+  // contain repetitions. For example, '010101' is a non-minimal pattern of
+  // a non-power-of-two length that can pass the above rotational test. It
+  // consists of the minimal pattern '01'. All our patterns are minimal, as
+  // they contain only one contiguous run of ones separated by at least one
+  // zero.
+
+  // Finally, we encode the values. "rotation" is the amount we rotated
+  // right by to "undo" the right-rotate encoded in immr, so must be
+  // negated.
+
+  // size 2:  N=0 immr=00000r imms=11110s
+  // size 4:  N=0 immr=0000rr imms=1110ss
+  // size 8:  N=0 immr=000rrr imms=110sss
+  // size 16: N=0 immr=00rrrr imms=10ssss
+  // size 32: N=0 immr=0rrrrr imms=0sssss
+  // size 64: N=1 immr=rrrrrr imms=ssssss
+  auto Immr = -Rotation & (Size - 1);
+  auto Imms = -(Size << 1) | (Ones - 1);
+  auto N = (Size >> 6);
+
+  Encoding = (N << 12) | (Immr << 6) | (Imms & 0x3f);
+  return true;
+}
+
 /// processLogicalImmediate - Determine if an immediate value can be encoded
 /// as the immediate operand of a logical instruction for the given register
 /// size.  If so, return true with "encoding" set to the encoded value in
 /// the form N:immr:imms.
 static inline bool processLogicalImmediate(uint64_t Imm, unsigned RegSize,
                                            uint64_t &Encoding) {
-  if (Imm == 0ULL || Imm == ~0ULL ||
-      (RegSize != 64 &&
-        (Imm >> RegSize != 0 || Imm == (~0ULL >> (64 - RegSize)))))
-    return false;
 
-  // First, determine the element size.
-  unsigned Size = RegSize;
-
-  do {
-    Size /= 2;
-    uint64_t Mask = (1ULL << Size) - 1;
-
-    if ((Imm & Mask) != ((Imm >> Size) & Mask)) {
-      Size *= 2;
-      break;
-    }
-  } while (Size > 2);
-
-  // Second, determine the rotation to make the element be: 0^m 1^n.
-  uint32_t CTO, I;
-  uint64_t Mask = ((uint64_t)-1LL) >> (64 - Size);
-  Imm &= Mask;
-
-  if (isShiftedMask_64(Imm)) {
-    I = llvm::countr_zero(Imm);
-    assert(I < 64 && "undefined behavior");
-    CTO = llvm::countr_one(Imm >> I);
-  } else {
-    Imm |= ~Mask;
-    if (!isShiftedMask_64(~Imm))
-      return false;
-
-    unsigned CLO = llvm::countl_one(Imm);
-    I = 64 - CLO;
-    CTO = CLO + llvm::countr_one(Imm) - (64 - Size);
+  switch (RegSize) {
+  default:
+    llvm_unreachable("Invalid register size");
+  case 8:
+    Imm &= 0xFF;
+    Imm |= Imm << 8;
+    [[fallthrough]];
+  case 16:
+    Imm &= 0xFFFF;
+    Imm |= Imm << 16;
+    [[fallthrough]];
+  case 32:
+    Imm &= 0xFFFF'FFFF;
+    Imm |= Imm << 32;
+    [[fallthrough]];
+  case 64:
+    return processLogicalImmediate64(Imm, Encoding);
   }
-
-  // Encode in Immr the number of RORs it would take to get *from* 0^m 1^n
-  // to our target value, where I is the number of RORs to go the opposite
-  // direction.
-  assert(Size > I && "I should be smaller than element size");
-  unsigned Immr = (Size - I) & (Size - 1);
-
-  // If size has a 1 in the n'th bit, create a value that has zeroes in
-  // bits [0, n] and ones above that.
-  uint64_t NImms = ~(Size-1) << 1;
-
-  // Or the CTO value into the low bits, which must be below the Nth bit
-  // bit mentioned above.
-  NImms |= (CTO-1);
-
-  // Extract the seventh bit and toggle it to create the N field.
-  unsigned N = ((NImms >> 6) & 1) ^ 1;
-
-  Encoding = (N << 12) | (Immr << 6) | (NImms & 0x3f);
-  return true;
 }
 
 /// isLogicalImmediate - Return true if the immediate is valid for a logical
