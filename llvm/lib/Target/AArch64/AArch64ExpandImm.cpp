@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64.h"
 #include "AArch64ExpandImm.h"
+#include "AArch64.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 
 using namespace llvm;
@@ -644,4 +644,15 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // We found no possible two or three instruction sequence; use the general
   // four-instruction sequence.
   expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
+}
+
+uint64_t AArch64_IMM::getMOVImmCost(uint64_t Imm, unsigned int BitSize) {
+  auto Insn = SmallVector<ImmInsnModel, 4>();
+  expandMOVImm(Imm, BitSize, Insn);
+  return Insn.size();
+}
+
+bool AArch64_IMM::isMaterializableInSingleInstruction(uint64_t Imm,
+                                                      unsigned int BitSize) {
+  return getMOVImmCost(Imm, BitSize) == 1;
 }

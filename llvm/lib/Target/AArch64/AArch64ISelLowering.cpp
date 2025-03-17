@@ -12055,12 +12055,12 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // cache pressure. The timings are still the same if you consider
     // movw+movk+fmov vs. adrp+ldr (it's one instruction longer, but the
     // movw+movk is fused). So we limit up to 2 instrdduction at most.
-    SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-    AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
-    assert(Insn.size() <= 4 &&
+    auto Cost =
+        AArch64_IMM::getMOVImmCost(ImmInt.getZExtValue(), VT.getSizeInBits());
+    assert(Cost <= 4 &&
            "Should be able to build any value with at most 4 moves");
     unsigned Limit = (OptForSize ? 1 : (Subtarget->hasFuseLiterals() ? 4 : 2));
-    IsLegal = Insn.size() <= Limit;
+    IsLegal = Cost <= Limit;
   }
 
   LLVM_DEBUG(dbgs() << (IsLegal ? "Legal " : "Illegal ") << VT
@@ -17790,11 +17790,10 @@ bool AArch64TargetLowering::isMulAddWithConstProfitable(
   const APInt C1C2 = C1Node->getAPIntValue() * C2Node->getAPIntValue();
   if (!isLegalAddImmediate(C1) || isLegalAddImmediate(C1C2.getSExtValue()))
     return true;
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
   // Adapt to the width of a register.
   unsigned BitSize = VT.getSizeInBits() <= 32 ? 32 : 64;
-  AArch64_IMM::expandMOVImm(C1C2.getZExtValue(), BitSize, Insn);
-  if (Insn.size() > 1)
+  if (!AArch64_IMM::isMaterializableInSingleInstruction(C1C2.getZExtValue(),
+                                                        BitSize))
     return false;
 
   // Default to true and let the DAGCombiner decide.

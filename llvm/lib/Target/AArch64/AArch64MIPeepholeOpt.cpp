@@ -164,9 +164,7 @@ static bool splitBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc, T &Imm2Enc) {
     return false;
 
   // If this immediate can be handled by one instruction, do not split it.
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(UImm, RegSize, Insn);
-  if (Insn.size() == 1)
+  if (AArch64_IMM::isMaterializableInSingleInstruction(UImm, RegSize))
     return false;
 
   // The bitmask immediate consists of consecutive ones.  Let's say there is
@@ -365,9 +363,7 @@ static bool splitAddSubImm(T Imm, unsigned RegSize, T &Imm0, T &Imm1) {
     return false;
 
   // The immediate can not be composed via a single instruction.
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(Imm, RegSize, Insn);
-  if (Insn.size() == 1)
+  if (AArch64_IMM::isMaterializableInSingleInstruction(Imm, RegSize))
     return false;
 
   // Split Imm into (Imm0 << 12) + Imm1;

@@ -381,9 +381,7 @@ InstructionCost AArch64TTIImpl::getIntImmCost(int64_t Val) {
     Val = ~Val;
 
   // Calculate how many moves we will need to materialize this constant.
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(Val, 64, Insn);
-  return Insn.size();
+  return AArch64_IMM::getMOVImmCost(Val, 64);
 }
 
 /// Calculate the cost of materializing the given constant.

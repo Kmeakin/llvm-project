@@ -28,6 +28,10 @@ struct ImmInsnModel {
 void expandMOVImm(uint64_t Imm, unsigned BitSize,
 		  SmallVectorImpl<ImmInsnModel> &Insn);
 
+uint64_t getMOVImmCost(uint64_t Imm, unsigned BitSize);
+
+bool isMaterializableInSingleInstruction(uint64_t Imm, unsigned int BitSize);
+
 } // end namespace AArch64_IMM
 
 } // end namespace llvm
